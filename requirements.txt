@@ -1,0 +1,15 @@
+sqlmodel
+fastapi
+uvicorn
+pydantic-settings
+sqlalchemy
+pymysql
+cryptography
+sshtunnel
+paramiko<3.0.0
+jinja2
+passlib[bcrypt]
+bcrypt==3.2.0
+python-jose[cryptography]
+python-multipart
+

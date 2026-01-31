@@ -5,7 +5,7 @@ This module provides FastAPI dependency functions for authentication and authori
 It implements a dual authentication strategy supporting both bearer tokens (for API clients)
 and HTTP-only cookies (for browser clients).
 """
-from typing import Generator, Optional
+from typing import Generator, Optional, List
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import TokenData
 from fastapi import Request
 

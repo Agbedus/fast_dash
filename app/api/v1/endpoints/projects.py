@@ -36,8 +36,8 @@ def list_projects(
     Returns:
         List[Project]: List of project objects
     """
-    # Admins can see all projects
-    if "super_admin" in current_user.roles or "admin" in current_user.roles:
+    # Privileged users can see all projects
+    if current_user.is_privileged:
         statement = select(Project).offset(skip).limit(limit)
     else:
         # Regular users only see projects they own
@@ -77,7 +77,7 @@ def read_project(
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    if not current_user.is_privileged:
         if project.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -143,7 +143,7 @@ def update_project(
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    if not current_user.is_privileged:
         if project.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -185,7 +185,7 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Check ownership permissions  
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    if not current_user.is_privileged:
         if project.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     

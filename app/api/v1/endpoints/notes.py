@@ -42,8 +42,8 @@ def list_notes(
     Returns:
         List[Note]: List of note objects
     """
-    # Admins can see all notes
-    if "super_admin" in current_user.roles or "admin" in current_user.roles:
+    # Privileged users (Admins/Super Admins) can see all notes
+    if current_user.is_privileged:
         statement = select(Note)
     else:
         # Regular users only see notes they own
@@ -92,7 +92,7 @@ def read_note(
         raise HTTPException(status_code=404, detail="Note not found")
     
     # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    if not current_user.is_privileged:
         if note.user_id != current_user.id:
             # TODO: Also check if note is shared with current_user via NoteShare
             raise HTTPException(status_code=403, detail="Not authorized")
@@ -185,7 +185,7 @@ def update_note(
         raise HTTPException(status_code=404, detail="Note not found")
     
     # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    if not current_user.is_privileged:
         if note.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -252,7 +252,7 @@ def delete_note(
         raise HTTPException(status_code=404, detail="Note not found")
     
     # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    if not current_user.is_privileged:
         if note.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     

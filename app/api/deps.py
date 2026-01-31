@@ -88,33 +88,6 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-def get_current_active_superuser(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    """
-    Dependency that requires the current user to be an administrator.
-    
-    Validates that the authenticated user has admin or super_admin role.
-    Use this dependency on endpoints that require administrative privileges.
-    
-    Args:
-        current_user: The currently authenticated user
-    
-    Returns:
-        User: The authenticated admin user
-    
-    Raises:
-        HTTPException 400: If the user doesn't have admin privileges
-    """
-    from app.models.user import UserRole
-    
-    # Check if user has admin or super_admin role
-    if UserRole.ADMIN not in current_user.roles and UserRole.SUPER_ADMIN not in current_user.roles:
-        raise HTTPException(
-            status_code=400, detail="The user doesn't have enough privileges"
-        )
-    return current_user
-
 def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -137,4 +110,35 @@ def get_current_active_user(
         - Checking if account is suspended
     """
     # Could add additional checks here (e.g., is_active, email_verified)
+    return current_user
+
+class RoleChecker:
+    """
+    Dependency factory for checking user roles.
+    
+    Usage: Depends(RoleChecker([UserRole.ADMIN, UserRole.MANAGER]))
+    """
+    def __init__(self, allowed_roles: List[UserRole]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
+        # Check if user has at least one of the allowed roles
+        if not any(role in current_user.roles for role in self.allowed_roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"The user does not have enough privileges. Required roles: {[r.value for r in self.allowed_roles]}"
+            )
+        return current_user
+
+def get_current_active_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    Dependency that requires the current user to be an administrator.
+    """
+    if not current_user.is_privileged:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="The user doesn't have enough privileges"
+        )
     return current_user

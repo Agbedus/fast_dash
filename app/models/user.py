@@ -84,6 +84,11 @@ class User(SQLModel, table=True):
     
     # Relationship to notes shared with this user
     shared_notes: List["Note"] = Relationship(back_populates="shared_with", link_model=NoteShare)
+
+    @property
+    def is_privileged(self) -> bool:
+        """Helper to check if user has admin-level roles."""
+        return UserRole.ADMIN in self.roles or UserRole.SUPER_ADMIN in self.roles
     
     # Note: The emailVerified field uses camelCase naming convention which differs
     # from Python's snake_case convention, but is maintained for compatibility with

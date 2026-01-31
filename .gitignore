@@ -1,0 +1,8 @@
+scripts/*
+
+# IDE
+.idea
+.vscode
+
+API_DOCUMENTATION.md
+FASTAPI.md

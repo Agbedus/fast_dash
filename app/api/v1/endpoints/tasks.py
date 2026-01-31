@@ -26,19 +26,25 @@ def list_tasks(
     """
     Retrieve a paginated list of tasks.
     
-    Optionally filter by project_id. All authenticated users can see all tasks.
-    
-    Args:
-        skip: Number of records to skip (for pagination)
-        limit: Maximum number of records to return
-        project_id: Optional project ID to filter tasks
-        db: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        List[Task]: List of task objects
+    Admins see all tasks. Regular users see tasks they are assigned to
+    OR tasks in projects they own.
     """
-    statement = select(Task)
+    from app.models.project import Project
+    from app.models.task import TaskAssignee
+
+    if current_user.is_privileged:
+        statement = select(Task)
+    else:
+        # Complex filter:
+        # 1. Tasks in projects owned by the user
+        # 2. Tasks assigned to the user
+        owned_project_ids_subquery = select(Project.id).where(Project.owner_id == current_user.id)
+        assigned_task_ids_subquery = select(TaskAssignee.task_id).where(TaskAssignee.user_id == current_user.id)
+        
+        statement = select(Task).where(
+            (Task.project_id.in_(owned_project_ids_subquery)) | 
+            (Task.id.in_(assigned_task_ids_subquery))
+        )
     
     # Filter by project if specified
     if project_id:
@@ -58,22 +64,34 @@ def read_task(
     """
     Get a specific task by ID.
     
-    All authenticated users can view any task.
-    
-    Args:
-        task_id: ID of the task to retrieve
-        db: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        Task: The requested task object
-    
-    Raises:
-        HTTPException 404: If the task doesn't exist
+    Admins see all tasks. Regular users see tasks they are assigned to
+    OR tasks in projects they own.
     """
+    from app.models.project import Project
+    from app.models.task import TaskAssignee
+
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    
+    if not current_user.is_privileged:
+        # Check project ownership
+        project_owned = False
+        if task.project_id:
+            project = db.get(Project, task.project_id)
+            if project and project.owner_id == current_user.id:
+                project_owned = True
+        
+        # Check task assignment
+        assigned = db.exec(
+            select(TaskAssignee).where(
+                TaskAssignee.task_id == task_id, 
+                TaskAssignee.user_id == current_user.id
+            )
+        ).first()
+        
+        if not project_owned and not assigned:
+            raise HTTPException(status_code=403, detail="Not authorized to view this task")
     
     return task
 
@@ -131,25 +149,25 @@ def update_task(
     """
     Update an existing task.
     
-    If the task_update includes an "assignees" field, the task's assignees will be
-    replaced with the new list. Pass an empty array to remove all assignees.
-    
-    Args:
-        task_id: ID of the task to update
-        task_update: Dictionary of fields to update, may include "assignees" array
-        db: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        Task: The updated task object
-    
-    Raises:
-        HTTPException 404: If the task doesn't exist
+    Only project owners or admins can update tasks.
     """
+    from app.models.project import Project
+
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # Check permissions
+    if not current_user.is_privileged:
+        project_owned = False
+        if task.project_id:
+            project = db.get(Project, task.project_id)
+            if project and project.owner_id == current_user.id:
+                project_owned = True
+        
+        if not project_owned:
+            raise HTTPException(status_code=403, detail="Not authorized to update this task")
+
     # Extract assignees if provided (None means don't update, [] means clear all)
     assignee_ids = task_update.pop("assignees", None)
     
@@ -187,23 +205,25 @@ def delete_task(
     """
     Delete a task and all its assignments.
     
-    Automatically removes all task assignee relationships before deleting the task.
-    
-    Args:
-        task_id: ID of the task to delete
-        db: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        dict: Success message
-    
-    Raises:
-        HTTPException 404: If the task doesn't exist
+    Only project owners or admins can delete tasks.
     """
+    from app.models.project import Project
+
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # Check permissions
+    if not current_user.is_privileged:
+        project_owned = False
+        if task.project_id:
+            project = db.get(Project, task.project_id)
+            if project and project.owner_id == current_user.id:
+                project_owned = True
+        
+        if not project_owned:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this task")
+
     # Delete task assignees first (foreign key constraint)
     with engine.connect() as connection:
         connection.execute(text("DELETE FROM `task_assignees` WHERE `task_id` = :task_id"), {"task_id": task_id})

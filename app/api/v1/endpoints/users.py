@@ -170,7 +170,7 @@ def read_user_by_id(
         return user
     
     # Only admins can view other users' profiles
-    if not (UserRole.ADMIN in current_user.roles or UserRole.SUPER_ADMIN in current_user.roles):
+    if not current_user.is_privileged:
         raise HTTPException(
             status_code=400, detail="The user doesn't have enough privileges"
         )

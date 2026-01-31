@@ -10,6 +10,8 @@ from app.models.user import User, UserRole
 from app.models.project import Project
 from app.models.task import Task
 from app.models.client import Client
+from app.models.note import Note
+from app.models.event import Event
 from jose import jwt, JWTError
 from app.schemas.auth import TokenData
 from app.core.security import get_password_hash
@@ -83,6 +85,26 @@ def user_detail_page(request: Request, user_id: str, db: Session = Depends(get_d
             "tables": get_tables()
         }
     )
+
+@router.delete("/users/{user_id}", include_in_schema=False)
+def delete_user_route(user_id: str, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    if UserRole.SUPER_ADMIN not in user.roles:
+        raise HTTPException(status_code=403, detail="Only super admins can delete users")
+        
+    target_user = db.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if target_user.id == user.id:
+        raise HTTPException(status_code=400, detail="You cannot delete yourself")
+        
+    db.delete(target_user)
+    db.commit()
+    return {"status": "success"}
 
 @router.get("/", include_in_schema=False)
 def root(request: Request, db: Session = Depends(get_db)):
@@ -325,6 +347,46 @@ def client_detail_page(request: Request, client_id: str, db: Session = Depends(g
             "request": request, 
             "current_user": user,
             "client": client,
+            "tables": get_tables()
+        }
+    )
+
+@router.get("/events/{event_id}", include_in_schema=False)
+def event_detail_page(request: Request, event_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    event = db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    return templates.TemplateResponse(
+        "event_detail.html", 
+        {
+            "request": request, 
+            "current_user": user,
+            "event": event,
+            "tables": get_tables()
+        }
+    )
+
+@router.get("/notes/{note_id}", include_in_schema=False)
+def note_detail_page(request: Request, note_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    note = db.get(Note, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    return templates.TemplateResponse(
+        "note_detail.html", 
+        {
+            "request": request, 
+            "current_user": user,
+            "note": note,
             "tables": get_tables()
         }
     )

@@ -1,65 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}Project: {{ project.name }}{% endblock %}
+{% block title %}Project - {{ project.name }}{% endblock %}
 
 {% block content %}
-<div class="h-[calc(100vh-64px)] flex flex-col md:flex-row overflow-hidden bg-white">
-    <!-- Left Column: Info Card -->
-    <div class="w-full md:w-80 border-r border-slate-200 bg-slate-50/30 flex flex-col p-8 items-center text-center overflow-y-auto custom-scrollbar">
-        <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20">
-            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+<div class="min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+            <a href="/database?table_name=projects" class="text-slate-400 hover:text-slate-200 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+            </a>
+            <h1 class="text-2xl font-bold text-slate-100">{{ project.name }}</h1>
         </div>
 
-        <h2 class="text-2xl font-black text-slate-900 leading-tight mb-2">{{ project.name }}</h2>
-        <span class="px-3 py-1 rounded-full bg-slate-200 text-slate-600 text-xs font-bold uppercase tracking-widest">{{ project.status }}</span>
-
-        <div class="w-full space-y-2 text-left mt-8 mb-8">
-            <div class="p-4 rounded-2xl bg-white border border-slate-200">
-                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Project Key</span>
-                <span class="text-xs font-mono text-slate-600 break-all">{{ project.key or 'N/A' }}</span>
+        <!-- Project Details -->
+        <div class="glass-elevated rounded-xl p-6 space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                    <p class="text-sm text-slate-200">{{ project.status or 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Priority</label>
+                    <p class="text-sm text-slate-200">{{ project.priority or 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Budget</label>
+                    <p class="text-sm text-slate-200">{{ project.budget or 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Owner</label>
+                    <p class="text-sm text-slate-200">{{ project.owner_id }}</p>
+                </div>
             </div>
-            <div class="p-4 rounded-2xl bg-white border border-slate-200">
-                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Start Date</span>
-                <span class="text-xs font-bold text-slate-600">{{ project.start_date or "N/A" }}</span>
-            </div>
-        </div>
-    </div>
 
-    <!-- Right Column: Details -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
-        <div class="max-w-4xl p-8 md:p-12">
-            <header class="mb-12">
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight mb-2">Project Details</h1>
-                <p class="text-slate-500 font-medium">{{ project.description or "No description provided." }}</p>
-            </header>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                 <div class="space-y-1">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client ID</label>
-                    <div class="text-sm font-bold text-slate-800">{{ project.client_id or "Internal" }}</div>
-                 </div>
-                 <div class="space-y-1">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Owner ID</label>
-                    <div class="text-sm font-bold text-slate-800">{{ project.owner_id or "Unassigned" }}</div>
-                 </div>
-                 <div class="space-y-1">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Budget</label>
-                    <div class="text-sm font-bold text-slate-800">{{ project.currency }} {{ project.budget or 0 }}</div>
-                 </div>
-                 <div class="space-y-1">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Spent</label>
-                    <div class="text-sm font-bold text-slate-800">{{ project.currency }} {{ project.spent }}</div>
-                 </div>
+            {% if project.description %}
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description</label>
+                <p class="text-sm text-slate-300">{{ project.description }}</p>
             </div>
-            
-            <form id="genericEditForm" class="hidden"></form> <!-- Placeholder to satisfy script if used generic logic -->
-
-            <div class="pt-8 flex items-center justify-between border-t border-slate-100">
-                <a href="/database?table_name=projects" class="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                    Back to List
-                </a>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>

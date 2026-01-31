@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Event - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+            <a href="/database?table_name=events" class="text-slate-400 hover:text-slate-200 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+            </a>
+            <h1 class="text-2xl font-bold text-slate-100">{{ event.title }}</h1>
+        </div>
+
+        <!-- Event Details -->
+        <div class="glass-elevated rounded-xl p-6 space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Start</label>
+                    <p class="text-sm text-slate-200">{{ event.start or 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">End</label>
+                    <p class="text-sm text-slate-200">{{ event.end or 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                    <p class="text-sm text-slate-200">{{ event.status or 'N/A' }}</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Privacy</label>
+                    <p class="text-sm text-slate-200">{{ event.privacy or 'N/A' }}</p>
+                </div>
+                {% if event.location %}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Location</label>
+                    <p class="text-sm text-slate-200">{{ event.location }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if event.description %}
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description</label>
+                <div class="text-sm text-slate-300 leading-relaxed bg-slate-800/30 rounded-lg p-4">{{ event.description }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

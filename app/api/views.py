@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text, func, desc
 from typing import Optional, List
 from app.core.config import settings
 from app.db.session import engine, get_db
@@ -111,9 +111,36 @@ def root(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login")
+    
+    # Dashboard Stats
+    stats = {
+        "users": db.exec(select(func.count(User.id))).one(),
+        "projects": db.exec(select(func.count(Project.id))).one(),
+        "tasks": db.exec(select(func.count(Task.id))).one(),
+        "active_projects": db.exec(
+            select(Project)
+            .where(Project.status == "in_progress")
+            .limit(3)
+        ).all()
+    }
+    
+    # Recent Activity (Last 5 tasks)
+    recent_tasks = db.exec(
+        select(Task)
+        .order_by(desc(Task.created_at))
+        .limit(5)
+    ).all()
+
     return templates.TemplateResponse(
         "index.html", 
-        {"request": request, "current_user": user, "version": settings.VERSION, "tables": get_tables()}
+        {
+            "request": request, 
+            "current_user": user, 
+            "version": settings.VERSION, 
+            "tables": get_tables(),
+            "stats": stats,
+            "recent_tasks": recent_tasks
+        }
     )
 
 @router.get("/database", include_in_schema=False)
@@ -135,6 +162,18 @@ def database_explorer(request: Request, table_name: Optional[str] = None, q: Opt
     columns = []
     rows = []
     pk_column = "id" # default guess
+    db_summary = {}
+    
+    if not current_table:
+        # Fetch stats for all tables
+        with engine.connect() as connection:
+            for t in tables:
+                try:
+                    count_query = text(f"SELECT COUNT(*) FROM `{t}`")
+                    count_result = connection.execute(count_query).scalar()
+                    db_summary[t] = count_result
+                except Exception as e:
+                    db_summary[t] = "Error"
     
     if current_table:
         cols_info = inspector.get_columns(current_table)
@@ -287,7 +326,8 @@ def database_explorer(request: Request, table_name: Optional[str] = None, q: Opt
             "q": q or "",
             "fk_data": fk_data,
             "field_options": field_options.get(current_table, {}),
-            "multi_select_fields": multi_select_fields.get(current_table, {})
+            "multi_select_fields": multi_select_fields.get(current_table, {}),
+            "db_summary": db_summary
         }
     )
 

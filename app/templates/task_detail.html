@@ -3,45 +3,214 @@
 {% block title %}Task - {{ task.name }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen p-6">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="flex items-center gap-3 mb-6">
-            <a href="/database?table_name=tasks" class="text-slate-400 hover:text-slate-200 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-            </a>
-            <h1 class="text-2xl font-bold text-slate-100">{{ task.name }}</h1>
+<div class="h-[calc(100vh-64px)] flex flex-col md:flex-row overflow-hidden">
+    <!-- Left Column: Task Identity & Metadata -->
+    <div class="w-full md:w-80 border-r border-slate-800/50 bg-slate-900/30 flex flex-col p-8 items-center text-center overflow-y-auto custom-scrollbar">
+        <div class="relative mb-8">
+            <div class="w-48 h-48 rounded-3xl overflow-hidden glass-elevated relative group flex items-center justify-center bg-gradient-to-br from-emerald-600 to-teal-700 shadow-2xl shadow-emerald-500/20">
+                <svg class="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+            </div>
+             <!-- Status Indicator -->
+             <div class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center border-4 border-slate-900 shadow-lg
+                {% if task.status == 'completed' %}bg-emerald-500
+                {% elif task.status == 'in_progress' %}bg-blue-500
+                {% elif task.status == 'waiting' %}bg-amber-500
+                {% else %}bg-slate-500{% endif %}">
+                <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            </div>
         </div>
 
-        <!-- Task Details -->
-        <div class="glass-elevated rounded-xl p-6 space-y-5">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                    <p class="text-sm text-slate-200">{{ task.status or 'N/A' }}</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Priority</label>
-                    <p class="text-sm text-slate-200">{{ task.priority or 'N/A' }}</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Project</label>
-                    <p class="text-sm text-slate-200">{{ task.project_id or 'N/A' }}</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Due Date</label>
-                    <p class="text-sm text-slate-200">{{ task.due_date or 'N/A' }}</p>
-                </div>
+        <h2 class="text-2xl font-bold text-slate-100 leading-tight mb-2">{{ task.name }}</h2>
+        <p class="text-emerald-400 font-semibold mb-6 truncate w-full">Task #{{ task.id }}</p>
+
+        <div class="w-full space-y-3 text-left mb-8">
+             <div class="p-4 rounded-xl glass border-slate-800/50 hover:border-emerald-500/30 transition-colors">
+                <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Project</span>
+                {% if project %}
+                <a href="/projects/{{ project.id }}" class="text-sm font-bold text-slate-200 hover:text-emerald-400 transition-colors flex items-center gap-1 group">
+                    {{ project.name }}
+                    <svg class="w-3 h-3 text-slate-500 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                </a>
+                {% else %}
+                <span class="text-xs font-semibold text-slate-400">No Project</span>
+                {% endif %}
             </div>
 
-            {% if task.description %}
-            <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description</label>
-                <p class="text-sm text-slate-300">{{ task.description }}</p>
+            <div class="p-4 rounded-xl glass border-slate-800/50">
+                <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Status</span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
+                    {% if task.status == 'completed' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
+                    {% elif task.status == 'in_progress' %}bg-blue-500/10 text-blue-400 border border-blue-500/20
+                    {% elif task.status == 'waiting' %}bg-amber-500/10 text-amber-400 border border-amber-500/20
+                    {% else %}bg-slate-500/10 text-slate-400 border border-slate-500/20{% endif %}">
+                    {{ task.status|replace('_', ' ')|title }}
+                </span>
             </div>
-            {% endif %}
+            
+            <div class="p-4 rounded-xl glass border-slate-800/50">
+                <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Priority</span>
+                 <span class="inline-flex items-center gap-2
+                    {% if task.priority == 'high' %}text-rose-400
+                    {% elif task.priority == 'medium' %}text-amber-400
+                    {% else %}text-emerald-400{% endif %}">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-current"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-wider">{{ task.priority|title }}</span>
+                </span>
+            </div>
+        </div>
+        
+        <div class="w-full">
+            <h3 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3 text-left px-1">Assignees</h3>
+            <div class="flex flex-wrap gap-2">
+                {% if assignees %}
+                    {% for assignee in assignees %}
+                    <div class="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-full px-3 py-1.5 hover:bg-slate-800 transition-colors">
+                        <div class="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white uppercase shadow-sm">
+                            {{ assignee.full_name[:1] }}
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-300">{{ assignee.full_name }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-xs text-slate-500 italic px-1">No assignees</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Details & Content -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-950">
+         <div class="max-w-5xl p-8 md:p-12 mx-auto">
+            <!-- Header -->
+             <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                     <div class="flex items-center gap-2 text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+                        <a href="/database?table_name=tasks" class="hover:text-white transition-colors">Tasks</a>
+                        <span class="text-slate-600">/</span>
+                        <span class="text-emerald-400">Details</span>
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Task Overview</h1>
+                     <p class="text-slate-400 text-sm mt-2 max-w-xl">Track progress, manage assignments, and ensure timely completion of this task.</p>
+                </div>
+                 
+                 <div class="flex items-center gap-3">
+                    <a href="/tasks/{{ task.id }}/edit" class="px-5 py-2.5 glass border-slate-700 hover:bg-slate-800/80 text-slate-200 font-bold rounded-xl transition-all active:scale-[0.98] uppercase text-[11px] tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        Edit
+                    </a>
+                    <form action="/tasks/{{ task.id }}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this task?');">
+                        <button type="submit" class="w-auto px-5 py-2.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white font-bold rounded-xl border border-rose-500/20 transition-all active:scale-[0.98] uppercase text-[11px] tracking-widest flex items-center gap-2 group">
+                            <svg class="w-4 h-4 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Delete
+                        </button>
+                    </form>
+                 </div>
+            </header>
+
+            <div class="space-y-8">
+                <!-- Description -->
+                 <section>
+                    <div class="flex items-center gap-3 mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">About Task</h3>
+                        <div class="h-px bg-slate-800 flex-1"></div>
+                    </div>
+                    <div class="p-8 rounded-2xl glass-elevated border-slate-800/50 prose prose-invert prose-sm max-w-none text-slate-300">
+                        {% if task.description %}
+                            {{ task.description }}
+                        {% else %}
+                            <p class="text-slate-500 italic">No description provided for this task.</p>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <!-- Schedule & Impact -->
+                <section>
+                    <div class="flex items-center gap-3 mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Schedule & Impact</h3>
+                        <div class="h-px bg-slate-800 flex-1"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <!-- Schedule -->
+                        <div class="p-6 rounded-2xl glass border-slate-800/50 flex flex-col h-full hover:border-slate-700/50 transition-colors">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/10">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-200">Schedule</h4>
+                                    <p class="text-xs text-slate-500">Deadlines & Timing</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-6 flex-1">
+                                <div class="relative pl-12">
+                                    <div class="absolute left-3 top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-600 z-10"></div>
+                                    <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Due Date</span>
+                                    <p class="text-xl font-mono text-slate-200 tracking-tight">
+                                        {{ task.due_date or 'Not set' }}
+                                    </p>
+                                    {% if task.due_date %}
+                                    <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-wide font-semibold">Target</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Impact/Priority Context -->
+                        <div class="p-6 rounded-2xl glass border-slate-800/50 flex flex-col h-full hover:border-slate-700/50 transition-colors">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 rounded-xl bg-slate-700/30 flex items-center justify-center text-slate-400 border border-white/5">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <div>
+                                     <h4 class="text-sm font-bold text-slate-200">Execution</h4>
+                                     <p class="text-xs text-slate-500">Task Status Overview</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between flex-1">
+                                <div>
+                                    <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Completion Status</span>
+                                    <div class="flex items-center gap-2">
+                                        {% if task.status == 'completed' %}
+                                            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            <span class="text-lg font-bold text-emerald-400">Done</span>
+                                        {% elif task.status == 'in_progress' %}
+                                            <div class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+                                            <span class="text-lg font-bold text-blue-400">Active</span>
+                                        {% else %}
+                                            <div class="w-3 h-3 rounded-full bg-slate-500"></div>
+                                            <span class="text-lg font-bold text-slate-400">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="h-12 w-px bg-slate-800"></div>
+                                <div class="text-right">
+                                    <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Priority Level</span>
+                                    <span class="text-lg font-bold capitalize 
+                                        {% if task.priority == 'high' %}text-rose-400
+                                        {% elif task.priority == 'medium' %}text-amber-400
+                                        {% else %}text-emerald-400{% endif %}">
+                                        {{ task.priority }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                 <!-- System Info -->
+                 <div class="pt-10 mt-4 flex items-center justify-between border-t border-slate-800/50 text-xs text-slate-600">
+                     <div class="flex gap-6">
+                        <p>Created: <span class="font-mono text-slate-500">{{ task.created_at[:10] }}</span></p>
+                        <p>Last Updated: <span class="font-mono text-slate-500">{{ task.updated_at[:10] }}</span></p>
+                     </div>
+                 </div>
+            </div>
         </div>
     </div>
 </div>

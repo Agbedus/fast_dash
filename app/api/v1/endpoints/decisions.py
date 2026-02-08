@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.db.session import get_db
 from app.models.event import Decision
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.api import deps
 
 router = APIRouter()
@@ -37,8 +37,8 @@ def list_decisions(
     Returns:
         List[Decision]: List of decision objects
     """
-    # Admins can see all decisions
-    if "super_admin" in current_user.roles or "admin" in current_user.roles:
+    # SUPER_ADMIN and MANAGER can see all decisions
+    if current_user.is_privileged or UserRole.MANAGER in current_user.roles:
         statement = select(Decision).offset(skip).limit(limit)
     else:
         # Regular users only see decisions they own
@@ -75,8 +75,8 @@ def read_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     
-    # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    # SUPER_ADMIN and MANAGER can view any decision
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
         if decision.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -141,10 +141,10 @@ def update_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     
-    # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
-        if decision.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN and MANAGER can update decisions
+    # Staff cannot edit/update
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+        raise HTTPException(status_code=403, detail="Not authorized to update decisions")
     
     # Apply updates to the decision
     for key, value in decision_update.items():
@@ -160,7 +160,7 @@ def update_decision(
 def delete_decision(
     decision_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_active_superuser),
 ):
     """
     Delete a decision.
@@ -183,10 +183,7 @@ def delete_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     
-    # Check ownership permissions
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
-        if decision.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN can delete (enforced by get_current_active_superuser)
     
     db.delete(decision)
     db.commit()

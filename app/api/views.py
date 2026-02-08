@@ -8,9 +8,9 @@ from app.db.session import engine, get_db
 from sqlmodel import Session, select
 from app.models.user import User, UserRole
 from app.models.project import Project
-from app.models.task import Task
+from app.models.task import Task, TaskAssignee
 from app.models.client import Client
-from app.models.note import Note
+from app.models.note import Note, NoteShare
 from app.models.event import Event
 from jose import jwt, JWTError
 from app.schemas.auth import TokenData
@@ -150,7 +150,7 @@ def database_explorer(request: Request, table_name: Optional[str] = None, q: Opt
         return RedirectResponse(url="/login")
     
     # Check permissions
-    if UserRole.SUPER_ADMIN not in user.roles and UserRole.ADMIN not in user.roles:
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles:
         # If not admin, maybe just reject or show empty? 
         # For now, let's redirect to home with a query param or something, or just raise 403
         raise HTTPException(status_code=403, detail="Not authorized to view database explorer")
@@ -341,15 +341,109 @@ def project_detail_page(request: Request, project_id: int, db: Session = Depends
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # Get client if exists
+    client = None
+    if project.client_id:
+        client = db.get(Client, project.client_id)
+
     return templates.TemplateResponse(
         "project_detail.html", 
         {
             "request": request, 
             "current_user": user,
             "project": project,
+            "client": client,
             "tables": get_tables()
         }
     )
+
+@router.get("/projects/{project_id}/edit", include_in_schema=False)
+def project_edit_page(request: Request, project_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    # Check permissions (admins or owner)
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles and project.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this project")
+        
+    clients = db.exec(select(Client)).all()
+    users = db.exec(select(User)).all()
+    
+    return templates.TemplateResponse(
+        "project_edit.html",
+        {
+            "request": request,
+            "current_user": user,
+            "project": project,
+            "clients": clients,
+            "users": users,
+            "tables": get_tables()
+        }
+    )
+
+@router.post("/projects/{project_id}/edit", include_in_schema=False)
+async def project_edit_submit(
+    request: Request, 
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles and project.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this project")
+    
+    form = await request.form()
+    
+    # Update fields
+    project.name = form.get("name")
+    project.key = form.get("key") or None
+    project.description = form.get("description")
+    project.status = form.get("status")
+    project.priority = form.get("priority")
+    project.client_id = form.get("client_id") or None
+    project.owner_id = form.get("owner_id") or None
+    project.start_date = form.get("start_date") or None
+    project.end_date = form.get("end_date") or None
+    project.budget = int(float(form.get("budget") or 0)) if form.get("budget") else None
+    project.currency = form.get("currency")
+    project.billing_type = form.get("billing_type")
+    project.is_archived = 1 if form.get("is_archived") == "on" else 0
+    project.tags = form.get("tags")
+    
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    
+    return RedirectResponse(url=f"/projects/{project_id}", status_code=303)
+
+@router.post("/projects/{project_id}/delete", include_in_schema=False)
+def project_delete(request: Request, project_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles and project.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this project")
+        
+    db.delete(project)
+    db.commit()
+    
+    return RedirectResponse(url="/database?table_name=projects", status_code=303)
 
 @router.get("/tasks/{task_id}", include_in_schema=False)
 def task_detail_page(request: Request, task_id: int, db: Session = Depends(get_db)):
@@ -361,15 +455,118 @@ def task_detail_page(request: Request, task_id: int, db: Session = Depends(get_d
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    project = None
+    if task.project_id:
+        project = db.get(Project, task.project_id)
+
+    # Fetch assignees
+    assignees_stmt = select(User).join(TaskAssignee, User.id == TaskAssignee.user_id).where(TaskAssignee.task_id == task_id)
+    assignees = db.exec(assignees_stmt).all()
+
     return templates.TemplateResponse(
         "task_detail.html", 
         {
             "request": request, 
             "current_user": user,
             "task": task,
+            "project": project,
+            "assignees": assignees,
             "tables": get_tables()
         }
     )
+
+@router.get("/tasks/{task_id}/edit", include_in_schema=False)
+def task_edit_page(request: Request, task_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    projects = db.exec(select(Project)).all()
+    users = db.exec(select(User)).all()
+    
+    # Get current assignee IDs
+    assignee_ids = [ta.user_id for ta in task.task_assignees]
+    
+    return templates.TemplateResponse(
+        "task_edit.html",
+        {
+            "request": request,
+            "current_user": user,
+            "task": task,
+            "projects": projects,
+            "users": users,
+            "current_assignee_ids": assignee_ids,
+            "tables": get_tables()
+        }
+    )
+
+@router.post("/tasks/{task_id}/edit", include_in_schema=False)
+async def task_edit_submit(
+    request: Request, 
+    task_id: int,
+    db: Session = Depends(get_db)
+):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    form = await request.form()
+    
+    # Update fields
+    task.name = form.get("name")
+    task.description = form.get("description")
+    task.status = form.get("status")
+    task.priority = form.get("priority")
+    task.due_date = form.get("due_date") or None
+    
+    project_id_val = form.get("project_id")
+    task.project_id = int(project_id_val) if project_id_val else None
+    
+    # Update assignments
+    # First remove existing
+    existing_links = db.exec(select(TaskAssignee).where(TaskAssignee.task_id == task_id)).all()
+    for link in existing_links:
+        db.delete(link)
+        
+    # Add new
+    assignee_ids = form.getlist("assignees")
+    for uid in assignee_ids:
+        new_link = TaskAssignee(task_id=task_id, user_id=uid)
+        db.add(new_link)
+    
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    
+    return RedirectResponse(url=f"/tasks/{task_id}", status_code=303)
+
+@router.post("/tasks/{task_id}/delete", include_in_schema=False)
+def task_delete(request: Request, task_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    # Also delete assignees associations
+    links = db.exec(select(TaskAssignee).where(TaskAssignee.task_id == task_id)).all()
+    for link in links:
+        db.delete(link)
+        
+    db.delete(task)
+    db.commit()
+    
+    return RedirectResponse(url="/database?table_name=tasks", status_code=303)
 
 @router.get("/clients/{client_id}", include_in_schema=False)
 def client_detail_page(request: Request, client_id: str, db: Session = Depends(get_db)):
@@ -391,6 +588,79 @@ def client_detail_page(request: Request, client_id: str, db: Session = Depends(g
         }
     )
 
+@router.get("/clients/{client_id}/edit", include_in_schema=False)
+def client_edit_page(request: Request, client_id: str, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    # Check permissions (admins only)
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles:
+        raise HTTPException(status_code=403, detail="Not authorized to edit clients")
+    
+    client = db.get(Client, client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+        
+    return templates.TemplateResponse(
+        "client_edit.html",
+        {
+            "request": request,
+            "current_user": user,
+            "client": client,
+            "tables": get_tables()
+        }
+    )
+
+@router.post("/clients/{client_id}/edit", include_in_schema=False)
+async def client_edit_submit(
+    request: Request, 
+    client_id: str,
+    db: Session = Depends(get_db)
+):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles:
+        raise HTTPException(status_code=403, detail="Not authorized to edit clients")
+    
+    client = db.get(Client, client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    form = await request.form()
+    
+    # Update fields
+    client.company_name = form.get("company_name")
+    client.contact_person_name = form.get("contact_person_name") or None
+    client.contact_email = form.get("contact_email") or None
+    client.website_url = form.get("website_url") or None
+    
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    
+    return RedirectResponse(url=f"/clients/{client_id}", status_code=303)
+
+@router.post("/clients/{client_id}/delete", include_in_schema=False)
+def client_delete(request: Request, client_id: str, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles:
+        raise HTTPException(status_code=403, detail="Not authorized to delete clients")
+    
+    client = db.get(Client, client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+        
+    db.delete(client)
+    db.commit()
+    
+    return RedirectResponse(url="/database?table_name=clients", status_code=303)
+
 @router.get("/events/{event_id}", include_in_schema=False)
 def event_detail_page(request: Request, event_id: int, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
@@ -411,6 +681,73 @@ def event_detail_page(request: Request, event_id: int, db: Session = Depends(get
         }
     )
 
+@router.get("/events/{event_id}/edit", include_in_schema=False)
+def event_edit_page(request: Request, event_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    event = db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    return templates.TemplateResponse(
+        "event_edit.html",
+        {
+            "request": request,
+            "current_user": user,
+            "event": event,
+            "tables": get_tables()
+        }
+    )
+
+@router.post("/events/{event_id}/edit", include_in_schema=False)
+async def event_edit_submit(
+    request: Request, 
+    event_id: int,
+    db: Session = Depends(get_db)
+):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    event = db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    form = await request.form()
+    
+    # Update fields
+    event.title = form.get("title")
+    event.description = form.get("description")
+    event.start = form.get("start")
+    event.end = form.get("end")
+    event.location = form.get("location")
+    event.status = form.get("status")
+    event.privacy = form.get("privacy")
+    event.recurrence = form.get("recurrence")
+    
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    
+    return RedirectResponse(url=f"/events/{event_id}", status_code=303)
+
+@router.post("/events/{event_id}/delete", include_in_schema=False)
+def event_delete(request: Request, event_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    event = db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    db.delete(event)
+    db.commit()
+    
+    return RedirectResponse(url="/database?table_name=events", status_code=303)
+
 @router.get("/notes/{note_id}", include_in_schema=False)
 def note_detail_page(request: Request, note_id: int, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
@@ -421,12 +758,119 @@ def note_detail_page(request: Request, note_id: int, db: Session = Depends(get_d
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
+    # Fetch shared users
+    shared_users_stmt = select(User).join(NoteShare, User.id == NoteShare.user_id).where(NoteShare.note_id == note_id)
+    shared_users = db.exec(shared_users_stmt).all()
+
     return templates.TemplateResponse(
         "note_detail.html", 
         {
             "request": request, 
             "current_user": user,
             "note": note,
+            "shared_users": shared_users,
             "tables": get_tables()
         }
     )
+
+@router.get("/notes/{note_id}/edit", include_in_schema=False)
+def note_edit_page(request: Request, note_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    note = db.get(Note, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+        
+    # Check permissions (owner only for now, maybe shared users can edit too? Let's restrict to owner or admin)
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles and note.user_id != user.id:
+         raise HTTPException(status_code=403, detail="Not authorized to edit this note")
+
+    users = db.exec(select(User)).all()
+    
+    # Get current shared user IDs
+    # Access relationship via note.shared_with or query NoteShare
+    # Note model has shared_with relationship
+    shared_user_ids = [u.id for u in note.shared_with]
+
+    return templates.TemplateResponse(
+        "note_edit.html",
+        {
+            "request": request,
+            "current_user": user,
+            "note": note,
+            "users": users,
+            "current_shared_user_ids": shared_user_ids,
+            "tables": get_tables()
+        }
+    )
+
+@router.post("/notes/{note_id}/edit", include_in_schema=False)
+async def note_edit_submit(
+    request: Request, 
+    note_id: int,
+    db: Session = Depends(get_db)
+):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    note = db.get(Note, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+        
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles and note.user_id != user.id:
+         raise HTTPException(status_code=403, detail="Not authorized to edit this note")
+    
+    form = await request.form()
+    
+    # Update fields
+    note.title = form.get("title")
+    note.content = form.get("content")
+    note.type = form.get("type")
+    note.tags = form.get("tags")
+    note.is_pinned = 1 if form.get("is_pinned") == "on" else 0
+    note.is_archived = 1 if form.get("is_archived") == "on" else 0
+    note.is_favorite = 1 if form.get("is_favorite") == "on" else 0
+    
+    # Update sharing
+    # First remove existing
+    existing_shares = db.exec(select(NoteShare).where(NoteShare.note_id == note_id)).all()
+    for share in existing_shares:
+        db.delete(share)
+        
+    # Add new
+    shared_ids = form.getlist("shared_with")
+    for uid in shared_ids:
+        new_share = NoteShare(note_id=note_id, user_id=uid)
+        db.add(new_share)
+    
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    
+    return RedirectResponse(url=f"/notes/{note_id}", status_code=303)
+
+@router.post("/notes/{note_id}/delete", include_in_schema=False)
+def note_delete(request: Request, note_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    note = db.get(Note, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles and note.user_id != user.id:
+         raise HTTPException(status_code=403, detail="Not authorized to delete this note")
+        
+    # Also delete shares
+    shares = db.exec(select(NoteShare).where(NoteShare.note_id == note_id)).all()
+    for share in shares:
+        db.delete(share)
+        
+    db.delete(note)
+    db.commit()
+    
+    return RedirectResponse(url="/database?table_name=notes", status_code=303)

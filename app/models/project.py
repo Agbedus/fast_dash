@@ -4,10 +4,14 @@ Project Model Module
 This module defines the Project model for managing project entities with comprehensive
 tracking of status, budget, timeline, and relationships to clients and users.
 """
-from typing import Optional
-from sqlmodel import SQLModel, Field
-
+from typing import Optional, List
+from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.task import Task
+    from app.models.user import User
 
 
 class Project(SQLModel, table=True):
@@ -59,6 +63,7 @@ class Project(SQLModel, table=True):
     
     # Relationships
     owner_id: Optional[str] = Field(default=None, foreign_key="users.id")
+    owner: Optional["User"] = Relationship(back_populates="projects")
     client_id: Optional[str] = Field(default=None, foreign_key="clients.id")
     # Note: manager_id was removed from the database schema
     # manager_id: Optional[str] = Field(default=None, foreign_key="users.id")
@@ -81,3 +86,6 @@ class Project(SQLModel, table=True):
     # Audit timestamps - automatically managed
     created_at: Optional[str] = Field(default_factory=lambda: datetime.utcnow().isoformat())
     updated_at: Optional[str] = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    
+    # Relationships
+    tasks: List["Task"] = Relationship(back_populates="project", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

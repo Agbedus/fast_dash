@@ -56,6 +56,10 @@ class Note(NoteBase, table=True):
     # Primary key
     id: Optional[int] = Field(default=None, primary_key=True)
     
+    # Relationships
+    owner: Optional["User"] = Relationship(back_populates="notes")
+    task: Optional["Task"] = Relationship(back_populates="notes")
+    
     # Relationship to access users this note is shared with via NoteShare junction table
     shared_with: List["User"] = Relationship(back_populates="shared_notes", link_model=NoteShare)
 

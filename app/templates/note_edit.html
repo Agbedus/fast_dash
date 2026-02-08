@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Note - {{ note.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+            <a href="/notes/{{ note.id }}" class="text-slate-400 hover:text-slate-200 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+            </a>
+            <h1 class="text-2xl font-bold text-slate-100">Edit Note</h1>
+        </div>
+
+        <form method="POST" class="glass-elevated rounded-xl p-6 space-y-6">
+            <!-- Basic Info -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Title</label>
+                <input type="text" name="title" value="{{ note.title }}" required
+                       class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <!-- Content -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Content</label>
+                <textarea name="content" rows="6"
+                          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ note.content or '' }}</textarea>
+            </div>
+
+             <!-- Tags & Type -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                     <label class="block text-sm font-medium text-slate-300 mb-2">Tags (Comma separated)</label>
+                     <input type="text" name="tags" value="{{ note.tags or '' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Type</label>
+                    <select name="type" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="general" {% if note.type == 'general' %}selected{% endif %}>General</option>
+                        <option value="meeting" {% if note.type == 'meeting' %}selected{% endif %}>Meeting</option>
+                        <option value="personal" {% if note.type == 'personal' %}selected{% endif %}>Personal</option>
+                        <option value="idea" {% if note.type == 'idea' %}selected{% endif %}>Idea</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Flags -->
+            <div class="flex gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="is_pinned" class="form-checkbox text-indigo-600 rounded bg-slate-800 border-white/10" {% if note.is_pinned %}checked{% endif %}>
+                    <span class="text-sm text-slate-300">Pinned</span>
+                </label>
+                 <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="is_favorite" class="form-checkbox text-pink-600 rounded bg-slate-800 border-white/10" {% if note.is_favorite %}checked{% endif %}>
+                    <span class="text-sm text-slate-300">Favorite</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="is_archived" class="form-checkbox text-slate-600 rounded bg-slate-800 border-white/10" {% if note.is_archived %}checked{% endif %}>
+                    <span class="text-sm text-slate-300">Archived</span>
+                </label>
+            </div>
+
+             <!-- Shared With (Multi-select) -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Shared With (Hold Ctrl/Cmd to select multiple)</label>
+                <select name="shared_with" multiple class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-32">
+                    {% for u in users %}
+                     <!-- Exclude current user from list if needed, but for now show all except maybe owner? -->
+                     {% if u.id != current_user.id %}
+                    <option value="{{ u.id }}" {% if u.id in current_shared_user_ids %}selected{% endif %}>{{ u.full_name }} ({{ u.email }})</option>
+                     {% endif %}
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-slate-500 mt-1">Select users to share this note with.</p>
+            </div>
+
+
+            <div class="pt-4 border-t border-white/10 flex justify-end gap-3">
+                <a href="/notes/{{ note.id }}" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</a>
+                <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.db.session import get_db, engine
 from app.models.note_share import NoteShare
 from app.models.note import Note, NoteReadWithShared
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.api import deps
 
 router = APIRouter()
@@ -42,13 +42,15 @@ def list_notes(
     Returns:
         List[Note]: List of note objects
     """
-    # Privileged users (Admins/Super Admins) can see all notes
-    if current_user.is_privileged:
+    # SUPER_ADMIN and MANAGER can see all notes
+    if current_user.is_privileged or UserRole.MANAGER in current_user.roles:
         statement = select(Note)
     else:
-        # Regular users only see notes they own
-        # TODO: Also include notes shared with the user via NoteShare table
-        statement = select(Note).where(Note.user_id == current_user.id)
+        # Regular users see notes they own OR notes shared with them
+        statement = select(Note).where(
+            (Note.user_id == current_user.id) | 
+            (Note.id.in_(select(NoteShare.note_id).where(NoteShare.user_id == current_user.id)))
+        )
     
     # Eager load shared_with relationship
     statement = statement.options(selectinload(Note.shared_with))
@@ -91,11 +93,18 @@ def read_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
     
-    # Check ownership permissions
-    if not current_user.is_privileged:
+    # SUPER_ADMIN and MANAGER can view any note
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
         if note.user_id != current_user.id:
-            # TODO: Also check if note is shared with current_user via NoteShare
-            raise HTTPException(status_code=403, detail="Not authorized")
+            # Check if note is shared with current_user via NoteShare
+            is_shared = db.exec(
+                select(NoteShare).where(
+                    NoteShare.note_id == note_id, 
+                    NoteShare.user_id == current_user.id
+                )
+            ).first()
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="Not authorized")
     
     return note
 
@@ -184,10 +193,10 @@ def update_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
     
-    # Check ownership permissions
-    if not current_user.is_privileged:
-        if note.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN and MANAGER can update notes
+    # Staff cannot edit/update
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+        raise HTTPException(status_code=403, detail="Not authorized to update notes")
     
     # Extract shared_with if provided (None means don't update, [] means clear all shares)
     shared_user_ids = note_update.pop("shared_with", None)
@@ -227,7 +236,7 @@ def update_note(
 def delete_note(
     note_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_active_superuser),
 ):
     """
     Delete a note and all its shares.
@@ -251,10 +260,7 @@ def delete_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
     
-    # Check ownership permissions
-    if not current_user.is_privileged:
-        if note.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN can delete (enforced by get_current_active_superuser)
     
     # Delete note shares first (foreign key constraint)
     with engine.connect() as connection:

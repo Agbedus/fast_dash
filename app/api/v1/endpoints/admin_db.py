@@ -179,3 +179,47 @@ def create_generic_table_row(
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/tables/{table_name}/{pk_column}/{pk_value}")
+def delete_generic_table_row(
+    table_name: str,
+    pk_column: str,
+    pk_value: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_superuser),
+):
+    """
+    Generic endpoint to delete a row in any table.
+    Restricted to Super Admins.
+    """
+    # 1. Verify table exists
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+
+    # 2. Verify pk column exists
+    columns = [col["name"] for col in inspector.get_columns(table_name)]
+    if pk_column not in columns:
+        raise HTTPException(status_code=400, detail=f"Primary key column '{pk_column}' not found in '{table_name}'")
+
+    # 3. Construct Delete Query safely
+    query_str = f"DELETE FROM `{table_name}` WHERE `{pk_column}` = :pk_value"
+    
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text(query_str), {"pk_value": pk_value})
+            connection.commit()
+            
+            if result.rowcount == 0:
+                 raise HTTPException(status_code=404, detail="Record not found")
+                 
+            return {"status": "success", "detail": "Record deleted"}
+            
+    except Exception as e:
+        # Check for foreign key constraint violation
+        if "foreign key constraint" in str(e).lower():
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot delete this record because it is referenced by other records."
+            )
+        raise HTTPException(status_code=500, detail=str(e))

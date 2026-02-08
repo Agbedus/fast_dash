@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.db.session import get_db
 from app.models.event import Event, EventRead, EventCreate, EventUpdate
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.api import deps
 
 router = APIRouter()
@@ -40,8 +40,12 @@ def list_events(
     Returns:
         List[Event]: List of event objects
     """
-    # All users can see all events
-    statement = select(Event).offset(skip).limit(limit)
+    # SUPER_ADMIN and MANAGER can see all events
+    if current_user.is_privileged or UserRole.MANAGER in current_user.roles:
+        statement = select(Event).offset(skip).limit(limit)
+    else:
+        # Others see only their own events
+        statement = select(Event).where(Event.user_id == current_user.id).offset(skip).limit(limit)
     
     events = db.exec(statement).all()
     return events
@@ -73,7 +77,11 @@ def read_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    # Events are accessible to all authenticated users
+    # SUPER_ADMIN and MANAGER can view any event
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+        if event.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    
     return event
 
 
@@ -151,12 +159,10 @@ def update_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    # Admins or the creator can update events
-    is_admin = "super_admin" in current_user.roles or "admin" in current_user.roles
-    is_owner = event.user_id == current_user.id
-    
-    if not is_admin and not is_owner:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN and MANAGER can update events
+    # Staff cannot edit/update
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+        raise HTTPException(status_code=403, detail="Not authorized to update events")
     
     # Update timestamp
     event.updated_at = datetime.utcnow().isoformat()
@@ -186,7 +192,7 @@ def update_event(
 def delete_event(
     event_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_active_superuser),
 ):
     """
     Delete an event.
@@ -209,12 +215,7 @@ def delete_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    # Only admins or the creator can delete events
-    is_admin = "super_admin" in current_user.roles or "admin" in current_user.roles
-    is_owner = event.user_id == current_user.id
-    
-    if not is_admin and not is_owner:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN can delete (enforced by get_current_active_superuser)
     
     db.delete(event)
     db.commit()

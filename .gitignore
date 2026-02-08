@@ -6,3 +6,9 @@ scripts/*
 
 API_DOCUMENTATION.md
 FASTAPI.md
+
+# Environment variables
+.env
+.env.example
+
+

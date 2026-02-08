@@ -116,7 +116,7 @@ class RoleChecker:
     """
     Dependency factory for checking user roles.
     
-    Usage: Depends(RoleChecker([UserRole.ADMIN, UserRole.MANAGER]))
+    Usage: Depends(RoleChecker([UserRole.MANAGER, UserRole.SUPER_ADMIN]))
     """
     def __init__(self, allowed_roles: List[UserRole]):
         self.allowed_roles = allowed_roles

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, text
 from app.db.session import get_db, engine
 from app.models.task import Task, TaskAssignee, TaskReadWithAssignees
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.api import deps
 
 router = APIRouter()
@@ -32,7 +32,8 @@ def list_tasks(
     from app.models.project import Project
     from app.models.task import TaskAssignee
 
-    if current_user.is_privileged:
+    # SUPER_ADMIN and MANAGER can see all tasks
+    if current_user.is_privileged or UserRole.MANAGER in current_user.roles:
         statement = select(Task)
     else:
         # Complex filter:
@@ -74,7 +75,8 @@ def read_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    if not current_user.is_privileged:
+    # SUPER_ADMIN and MANAGER can see all tasks
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
         # Check project ownership
         project_owned = False
         if task.project_id:
@@ -158,15 +160,10 @@ def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
     
     # Check permissions
-    if not current_user.is_privileged:
-        project_owned = False
-        if task.project_id:
-            project = db.get(Project, task.project_id)
-            if project and project.owner_id == current_user.id:
-                project_owned = True
-        
-        if not project_owned:
-            raise HTTPException(status_code=403, detail="Not authorized to update this task")
+    # Only SUPER_ADMIN and MANAGER can update tasks
+    # Staff cannot edit/update tasks
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+        raise HTTPException(status_code=403, detail="Not authorized to update tasks")
 
     # Extract assignees if provided (None means don't update, [] means clear all)
     assignee_ids = task_update.pop("assignees", None)
@@ -200,7 +197,7 @@ def update_task(
 def delete_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_active_superuser),
 ):
     """
     Delete a task and all its assignments.
@@ -213,21 +210,15 @@ def delete_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # Check permissions
-    if not current_user.is_privileged:
-        project_owned = False
-        if task.project_id:
-            project = db.get(Project, task.project_id)
-            if project and project.owner_id == current_user.id:
-                project_owned = True
-        
-        if not project_owned:
-            raise HTTPException(status_code=403, detail="Not authorized to delete this task")
+    # Only SUPER_ADMIN can delete (enforced by get_current_active_superuser)
 
-    # Delete task assignees first (foreign key constraint)
-    with engine.connect() as connection:
-        connection.execute(text("DELETE FROM `task_assignees` WHERE `task_id` = :task_id"), {"task_id": task_id})
-        connection.commit()
+    # Unlink notes and delete task assignees (foreign key constraints)
+    # Using db.execute ensures we stay in the same transaction
+    db.execute(text("UPDATE notes SET task_id = NULL WHERE task_id = :task_id"), {"task_id": task_id})
+    db.execute(text("DELETE FROM task_assignees WHERE task_id = :task_id"), {"task_id": task_id})
+    
+    # Commit the unlink/cleanup operations first to ensure DB state satisfies constraints
+    db.commit()
     
     # Now safe to delete the task
     db.delete(task)

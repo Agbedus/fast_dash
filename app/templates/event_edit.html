@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Event - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+            <a href="/events/{{ event.id }}" class="text-slate-400 hover:text-slate-200 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+            </a>
+            <h1 class="text-2xl font-bold text-slate-100">Edit Event</h1>
+        </div>
+
+        <form method="POST" class="glass-elevated rounded-xl p-6 space-y-6">
+            <!-- Basic Info -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Title</label>
+                <input type="text" name="title" value="{{ event.title }}" required
+                       class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                <textarea name="description" rows="3"
+                          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ event.description or '' }}</textarea>
+            </div>
+
+            <!-- Time -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Start</label>
+                    <input type="datetime-local" name="start" value="{{ event.start }}" required
+                           class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">End</label>
+                    <input type="datetime-local" name="end" value="{{ event.end }}" required
+                           class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+             <!-- Location -->
+            <div>
+                 <label class="block text-sm font-medium text-slate-300 mb-2">Location</label>
+                 <input type="text" name="location" value="{{ event.location or '' }}"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <!-- Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                    <select name="status" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="tentative" {% if event.status == 'tentative' %}selected{% endif %}>Tentative</option>
+                        <option value="confirmed" {% if event.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="cancelled" {% if event.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Privacy</label>
+                    <select name="privacy" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="public" {% if event.privacy == 'public' %}selected{% endif %}>Public</option>
+                        <option value="private" {% if event.privacy == 'private' %}selected{% endif %}>Private</option>
+                         <option value="confidential" {% if event.privacy == 'confidential' %}selected{% endif %}>Confidential</option>
+                    </select>
+                </div>
+                <div>
+                     <label class="block text-sm font-medium text-slate-300 mb-2">Recurrence</label>
+                    <select name="recurrence" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="none" {% if event.recurrence == 'none' %}selected{% endif %}>None</option>
+                        <option value="daily" {% if event.recurrence == 'daily' %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if event.recurrence == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if event.recurrence == 'monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="yearly" {% if event.recurrence == 'yearly' %}selected{% endif %}>Yearly</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-white/10 flex justify-end gap-3">
+                <a href="/events/{{ event.id }}" class="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</a>
+                <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

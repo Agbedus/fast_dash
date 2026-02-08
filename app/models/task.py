@@ -8,6 +8,11 @@ assigned to multiple tasks.
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.note import Note
 
 
 class TaskAssignee(SQLModel, table=True):
@@ -60,8 +65,14 @@ class Task(TaskBase, table=True):
     # Primary key
     id: Optional[int] = Field(default=None, primary_key=True)
     
+    # Relationships
+    project: Optional["Project"] = Relationship(back_populates="tasks")
+    
     # Relationship to access assignees through the junction table
-    task_assignees: List["TaskAssignee"] = Relationship()
+    task_assignees: List["TaskAssignee"] = Relationship(sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    
+    # Relationship to notes
+    notes: List["Note"] = Relationship(back_populates="task")
 
 
 class TaskRead(TaskBase):

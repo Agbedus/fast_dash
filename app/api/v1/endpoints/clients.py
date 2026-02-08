@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.db.session import get_db
 from app.models.client import Client
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.api import deps
 
 router = APIRouter()
@@ -21,7 +21,7 @@ def list_clients(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.RoleChecker([UserRole.MANAGER, UserRole.SUPER_ADMIN])),
 ):
     """
     Retrieve a paginated list of clients.
@@ -38,7 +38,7 @@ def list_clients(
     Returns:
         List[Client]: List of client objects
     """
-    # All users can see all clients (shared resource model)
+    # Only Managers and Super Admins can see clients
     statement = select(Client).offset(skip).limit(limit)
     
     clients = db.exec(statement).all()
@@ -49,7 +49,7 @@ def list_clients(
 def read_client(
     client_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.RoleChecker([UserRole.MANAGER, UserRole.SUPER_ADMIN])),
 ):
     """
     Get a specific client by ID.
@@ -79,7 +79,7 @@ def read_client(
 def create_client(
     client: Client,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.RoleChecker([UserRole.MANAGER, UserRole.SUPER_ADMIN])),
 ):
     """
     Create a new client.
@@ -107,7 +107,7 @@ def update_client(
     client_id: str,
     client_update: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.RoleChecker([UserRole.MANAGER, UserRole.SUPER_ADMIN])),
 ):
     """
     Update an existing client.
@@ -131,8 +131,8 @@ def update_client(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Only admins can update clients
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
+    # Role check is now handled by the dependency, but keeping this for safety or internal logic
+    if UserRole.SUPER_ADMIN not in current_user.roles and UserRole.MANAGER not in current_user.roles:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Apply updates to the client
@@ -149,7 +149,7 @@ def update_client(
 def delete_client(
     client_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_active_superuser),
 ):
     """
     Delete a client.
@@ -172,9 +172,7 @@ def delete_client(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Only admins can delete clients
-    if "super_admin" not in current_user.roles and "admin" not in current_user.roles:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Only Super Admins can delete clients (enforced by get_current_active_superuser)
     
     db.delete(client)
     db.commit()

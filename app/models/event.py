@@ -7,10 +7,14 @@ This module defines two models:
 """
 from enum import Enum
 from typing import Optional, Any, Union, List
-from sqlmodel import SQLModel, Field, AutoString
+from sqlmodel import SQLModel, Field, AutoString, Relationship
 from datetime import datetime
 from pydantic import field_validator, ValidationInfo
 import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class EventStatus(str, Enum):
@@ -87,6 +91,8 @@ class Event(EventBase, table=True):
     
     # Primary key
     id: Optional[int] = Field(default=None, primary_key=True)
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="events")
 
 
 class EventRead(EventBase):
@@ -204,3 +210,6 @@ class Decision(SQLModel, table=True):
     
     # Ownership
     user_id: Optional[str] = Field(default=None, foreign_key="users.id")
+    
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="decisions")

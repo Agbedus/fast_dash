@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.db.session import get_db
 from app.models.project import Project
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.api import deps
 
 router = APIRouter()
@@ -36,11 +36,11 @@ def list_projects(
     Returns:
         List[Project]: List of project objects
     """
-    # Privileged users can see all projects
-    if current_user.is_privileged:
+    # SUPER_ADMIN and MANAGER can see all projects
+    if current_user.is_privileged or UserRole.MANAGER in current_user.roles:
         statement = select(Project).offset(skip).limit(limit)
     else:
-        # Regular users only see projects they own
+        # Others (Staff, User, Client) see projects they own or are shared with (simplified to own for now)
         statement = select(Project).where(
             Project.owner_id == current_user.id
         ).offset(skip).limit(limit)
@@ -76,8 +76,8 @@ def read_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Check ownership permissions
-    if not current_user.is_privileged:
+    # SUPER_ADMIN and MANAGER can view any project
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
         if project.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -142,10 +142,10 @@ def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Check ownership permissions
-    if not current_user.is_privileged:
-        if project.owner_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN and MANAGER can update projects
+    # Staff cannot edit/update
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+        raise HTTPException(status_code=403, detail="Not authorized to edit projects")
     
     # Apply updates to the project
     for key, value in project_update.items():
@@ -161,7 +161,7 @@ def update_project(
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_active_superuser),
 ):
     """
     Delete a project.
@@ -184,10 +184,7 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Check ownership permissions  
-    if not current_user.is_privileged:
-        if project.owner_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    # Only SUPER_ADMIN can delete (enforced by get_current_active_superuser)
     
     db.delete(project)
     db.commit()

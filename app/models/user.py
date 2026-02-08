@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING
 from app.models.note_share import NoteShare
 
 if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.task import Task
+    from app.models.event import Event, Decision
     from app.models.note import Note
 
 
@@ -20,22 +23,17 @@ class UserRole(str, Enum):
     """
     Enumeration of user roles defining permission levels in the system.
     
-    Role hierarchy (from least to most privileged):
-    - USER: Basic user with minimal permissions
-    - CLIENT: External client user with limited access
-    - STAFF: Internal staff member with standard access (default role)
-    - MANAGER: Project manager with elevated permissions
-    - ADMIN: Administrator with full access to most resources
-    - SUPER_ADMIN: Super administrator with complete system access
-    
-    Permission checks throughout the API use these roles to control access to
-    resources and operations.
+    Simplified Role hierarchy:
+    - SUPER_ADMIN: System owner with full access, including deletion and user management.
+    - MANAGER: Admin/Manager role. Can create/update operational data but cannot delete or see users.
+    - STAFF: Internal team member. Can create own objects, see shared objects, but no edit/delete.
+    - CLIENT: External client user with limited read-only access to shared resources.
+    - USER: Basic user with minimal permissions.
     """
     USER = "user"
     CLIENT = "client"
     STAFF = "staff"
     MANAGER = "manager"
-    ADMIN = "admin"
     SUPER_ADMIN = "super_admin"
 
 
@@ -85,10 +83,16 @@ class User(SQLModel, table=True):
     # Relationship to notes shared with this user
     shared_notes: List["Note"] = Relationship(back_populates="shared_with", link_model=NoteShare)
 
+    # Owned resources
+    projects: List["Project"] = Relationship(back_populates="owner")
+    events: List["Event"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    decisions: List["Decision"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    notes: List["Note"] = Relationship(back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+
     @property
     def is_privileged(self) -> bool:
-        """Helper to check if user has admin-level roles."""
-        return UserRole.ADMIN in self.roles or UserRole.SUPER_ADMIN in self.roles
+        """Helper to check if user has system-level admin roles."""
+        return UserRole.SUPER_ADMIN in self.roles
     
     # Note: The emailVerified field uses camelCase naming convention which differs
     # from Python's snake_case convention, but is maintained for compatibility with

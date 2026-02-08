@@ -1,0 +1,424 @@
+{% extends "base.html" %} {% block title %}Edit Project - {{ project.name }}{%
+endblock %} {% block content %}
+<div class="min-h-screen p-6">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-6">
+      <a
+        href="/projects/{{ project.id }}"
+        class="text-slate-400 hover:text-slate-200 transition-colors"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
+        </svg>
+      </a>
+      <h1 class="text-2xl font-bold text-slate-100">Edit Project</h1>
+    </div>
+
+    <form method="POST" class="glass-elevated rounded-xl p-6 space-y-6">
+      <!-- Basic Info -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Project Name</label
+          >
+          <input
+            type="text"
+            name="name"
+            value="{{ project.name }}"
+            required
+            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Project Key</label
+          >
+          <input
+            type="text"
+            name="key"
+            value="{{ project.key or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2"
+          >Description</label
+        >
+        <textarea
+          name="description"
+          rows="3"
+          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+{{ project.description or '' }}</textarea
+        >
+      </div>
+
+      <!-- Settings -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Status</label
+          >
+          <select
+            name="status"
+            class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option
+              value="planning"
+              {%
+              if
+              project.status=""
+              ="planning"
+              %}selected{%
+              endif
+              %}
+            >
+              Planning
+            </option>
+            <option
+              value="in_progress"
+              {%
+              if
+              project.status=""
+              ="in_progress"
+              %}selected{%
+              endif
+              %}
+            >
+              In Progress
+            </option>
+            <option
+              value="completed"
+              {%
+              if
+              project.status=""
+              ="completed"
+              %}selected{%
+              endif
+              %}
+            >
+              Completed
+            </option>
+            <option
+              value="on_hold"
+              {%
+              if
+              project.status=""
+              ="on_hold"
+              %}selected{%
+              endif
+              %}
+            >
+              On Hold
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Priority</label
+          >
+          <select
+            name="priority"
+            class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option
+              value="low"
+              {%
+              if
+              project.priority=""
+              ="low"
+              %}selected{%
+              endif
+              %}
+            >
+              Low
+            </option>
+            <option
+              value="medium"
+              {%
+              if
+              project.priority=""
+              ="medium"
+              %}selected{%
+              endif
+              %}
+            >
+              Medium
+            </option>
+            <option
+              value="high"
+              {%
+              if
+              project.priority=""
+              ="high"
+              %}selected{%
+              endif
+              %}
+            >
+              High
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Client</label
+          >
+          <select
+            name="client_id"
+            class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">No Client</option>
+            {% for client in clients %}
+            <option
+              value="{{ client.id }}"
+              {%
+              if
+              project.client_id=""
+              ="client.id"
+              %}selected{%
+              endif
+              %}
+            >
+              {{ client.company_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Owner</label
+          >
+          <select
+            name="owner_id"
+            class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">No Owner</option>
+            {% for u in users %}
+            <option
+              value="{{ u.id }}"
+              {%
+              if
+              project.owner_id=""
+              ="u.id"
+              %}selected{%
+              endif
+              %}
+            >
+              {{ u.full_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Start Date</label
+          >
+          <input
+            type="date"
+            name="start_date"
+            value="{{ project.start_date or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >End Date</label
+          >
+          <input
+            type="date"
+            name="end_date"
+            value="{{ project.end_date or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
+      <!-- Budget -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Budget Amount</label
+          >
+          <input
+            type="number"
+            name="budget"
+            value="{{ project.budget or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Currency</label
+          >
+          <select
+            name="currency"
+            class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option
+              value="USD"
+              {%
+              if
+              project.currency=""
+              ="USD"
+              %}selected{%
+              endif
+              %}
+            >
+              USD
+            </option>
+            <option
+              value="EUR"
+              {%
+              if
+              project.currency=""
+              ="EUR"
+              %}selected{%
+              endif
+              %}
+            >
+              EUR
+            </option>
+            <option
+              value="GBP"
+              {%
+              if
+              project.currency=""
+              ="GBP"
+              %}selected{%
+              endif
+              %}
+            >
+              GBP
+            </option>
+            <option
+              value="GHS"
+              {%
+              if
+              project.currency=""
+              ="GHS"
+              %}selected{%
+              endif
+              %}
+            >
+              GHS
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2"
+            >Billing Type</label
+          >
+          <select
+            name="billing_type"
+            class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option
+              value="non_billable"
+              {%
+              if
+              project.billing_type=""
+              ="non_billable"
+              %}selected{%
+              endif
+              %}
+            >
+              Non-Billable
+            </option>
+            <option
+              value="hourly"
+              {%
+              if
+              project.billing_type=""
+              ="hourly"
+              %}selected{%
+              endif
+              %}
+            >
+              Hourly
+            </option>
+            <option
+              value="fixed_cost"
+              {%
+              if
+              project.billing_type=""
+              ="fixed_cost"
+              %}selected{%
+              endif
+              %}
+            >
+              Fixed Cost
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Metadata -->
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2"
+          >Tags (JSON)</label
+        >
+        <input
+          type="text"
+          name="tags"
+          value="{{ project.tags or '' }}"
+          placeholder='["tag1", "tag2"]'
+          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="is_archived"
+          id="is_archived"
+          {%
+          if
+          project.is_archived
+          %}checked{%
+          endif
+          %}
+          class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+        />
+        <label for="is_archived" class="text-sm text-slate-300"
+          >Archive this project</label
+        >
+      </div>
+
+      <div class="pt-4 border-t border-white/10 flex justify-end gap-3">
+        <a
+          href="/projects/{{ project.id }}"
+          class="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+          >Cancel</a
+        >
+        <button
+          type="submit"
+          class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors"
+        >
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

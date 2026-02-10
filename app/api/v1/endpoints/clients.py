@@ -131,10 +131,6 @@ def update_client(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Role check is now handled by the dependency, but keeping this for safety or internal logic
-    if UserRole.SUPER_ADMIN not in current_user.roles and UserRole.MANAGER not in current_user.roles:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
     # Apply updates to the client
     for key, value in client_update.items():
         setattr(client, key, value)

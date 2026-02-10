@@ -12,9 +12,8 @@ from app.models.task import Task, TaskAssignee
 from app.models.client import Client
 from app.models.note import Note, NoteShare
 from app.models.event import Event
-from jose import jwt, JWTError
-from app.schemas.auth import TokenData
 from app.core.security import get_password_hash
+from app.api.deps import get_current_user
 
 router = APIRouter()
 
@@ -25,22 +24,14 @@ def get_tables():
     return inspector.get_table_names()
 
 def get_current_user_from_cookie(request: Request, db: Session) -> Optional[User]:
-    token = request.cookies.get("access_token")
-    if not token or not token.startswith("Bearer "):
-        return None
-    token = token.replace("Bearer ", "")
+    """
+    Wrapper around deps.get_current_user that returns None instead of raising
+    exceptions. Used for template routes that need soft redirects to login.
+    """
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        email = payload.get("sub")
-        if email is None:
-            return None
-    except (JWTError):
+        return get_current_user(request, db, token=None)
+    except HTTPException:
         return None
-    
-    user = db.exec(select(User).where(User.email == email)).first()
-    return user
 
 @router.get("/login", include_in_schema=False)
 def login_page(request: Request):

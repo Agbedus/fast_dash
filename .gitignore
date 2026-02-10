@@ -1,14 +1,24 @@
 scripts/*
 
+# Local Database
+sqlite.db
+
 # IDE
 .idea
 .vscode
 
 API_DOCUMENTATION.md
 FASTAPI.md
+FEATURES.md
+USER_PERMISSIONS_MATRIX.md
 
 # Environment variables
 .env
 .env.example
+
+
+
+
+
 
 

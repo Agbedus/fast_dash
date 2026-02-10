@@ -85,9 +85,10 @@ class User(SQLModel, table=True):
 
     # Owned resources
     projects: List["Project"] = Relationship(back_populates="owner")
-    events: List["Event"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-    decisions: List["Decision"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-    notes: List["Note"] = Relationship(back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    events: List["Event"] = Relationship(back_populates="user")
+    decisions: List["Decision"] = Relationship(back_populates="user")
+    notes: List["Note"] = Relationship(back_populates="owner")
+    tasks: List["Task"] = Relationship(back_populates="creator")
 
     @property
     def is_privileged(self) -> bool:

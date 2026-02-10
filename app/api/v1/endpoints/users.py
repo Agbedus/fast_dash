@@ -21,22 +21,26 @@ def read_users(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(deps.get_current_active_superuser),
+    current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Retrieve a paginated list of all users.
     
-    Only administrators can access this endpoint.
+    Administrators and Managers can access this endpoint.
     
     Args:
         db: Database session
         skip: Number of records to skip (for pagination)
         limit: Maximum number of records to return
-        current_user: Must be an admin (enforced by dependency)
+        current_user: Must be an admin or manager
     
     Returns:
         List[UserRead]: List of user objects (passwords excluded)
     """
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
+         raise HTTPException(
+            status_code=400, detail="The user doesn't have enough privileges"
+        )
     users = db.exec(select(User).offset(skip).limit(limit)).all()
     return users
 
@@ -169,8 +173,8 @@ def read_user_by_id(
     if user == current_user:
         return user
     
-    # Only admins can view other users' profiles
-    if not current_user.is_privileged:
+    # Admins and Managers can view other users' profiles
+    if not (current_user.is_privileged or UserRole.MANAGER in current_user.roles):
         raise HTTPException(
             status_code=400, detail="The user doesn't have enough privileges"
         )
@@ -258,6 +262,14 @@ def delete_user(
         raise HTTPException(
             status_code=400, detail="Users cannot delete themselves"
         )
+    
+    # Unattach related resources instead of deleting them (cascading is removed in model)
+    # Using SQL directly is efficient for bulk updates
+    db.execute(text("UPDATE projects SET owner_id = NULL WHERE owner_id = :user_id"), {"user_id": user_id})
+    db.execute(text("UPDATE tasks SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
+    db.execute(text("UPDATE events SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
+    db.execute(text("UPDATE decisions SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
+    db.execute(text("UPDATE notes SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
     
     db.delete(user)
     db.commit()

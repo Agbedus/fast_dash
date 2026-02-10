@@ -39,12 +39,14 @@ def list_tasks(
         # Complex filter:
         # 1. Tasks in projects owned by the user
         # 2. Tasks assigned to the user
+        # 3. Tasks created by the user
         owned_project_ids_subquery = select(Project.id).where(Project.owner_id == current_user.id)
         assigned_task_ids_subquery = select(TaskAssignee.task_id).where(TaskAssignee.user_id == current_user.id)
         
         statement = select(Task).where(
             (Task.project_id.in_(owned_project_ids_subquery)) | 
-            (Task.id.in_(assigned_task_ids_subquery))
+            (Task.id.in_(assigned_task_ids_subquery)) |
+            (Task.user_id == current_user.id)
         )
     
     # Filter by project if specified
@@ -92,7 +94,7 @@ def read_task(
             )
         ).first()
         
-        if not project_owned and not assigned:
+        if not project_owned and not assigned and task.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized to view this task")
     
     return task
@@ -123,6 +125,7 @@ def create_task(
     
     # Create the task
     task = Task(**task_data)
+    task.user_id = current_user.id # Set the creator
     db.add(task)
     db.commit()
     db.refresh(task)

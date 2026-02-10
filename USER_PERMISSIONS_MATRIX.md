@@ -23,7 +23,7 @@ This document outlines the simplified user permission matrix for the Fast Dash a
 | **Notes**     |    CRUD     | Create, Read, Update | Create, Read (Own/Shared) | Read (Shared) |
 | **Events**    |    CRUD     | Create, Read, Update | Create, Read (Own/Shared) | Read (Shared) |
 | **Decisions** |    CRUD     | Create, Read, Update | Create, Read (Own/Shared) | Read (Shared) |
-| **Users**     |    CRUD     |         None         |           None            |     None      |
+| **Users**     |    CRUD     |         Read         |           None            |     None      |
 
 **Key:**
 
@@ -47,7 +47,7 @@ This document outlines the simplified user permission matrix for the Fast Dash a
 
 - **Operational Management**: Can see and manage all clients, tasks, projects, notes, and events.
 - **No Delete**: Cannot delete any records.
-- **No User Visibility**: Cannot see or manage users. This separates operational management from user/permission management.
+- **User Visibility**: Can see the user list to assign tasks, but cannot manage user accounts (create/delete/promote).
 - **Client Visibility**: Full visibility into the client list and related data.
 
 ### 3. Staff

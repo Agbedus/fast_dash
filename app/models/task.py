@@ -64,9 +64,13 @@ class Task(TaskBase, table=True):
     
     # Primary key
     id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Ownership
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id")
     
     # Relationships
     project: Optional["Project"] = Relationship(back_populates="tasks")
+    creator: Optional["User"] = Relationship(back_populates="tasks")
     
     # Relationship to access assignees through the junction table
     task_assignees: List["TaskAssignee"] = Relationship(sa_relationship_kwargs={"cascade": "all, delete-orphan"})
@@ -78,6 +82,7 @@ class Task(TaskBase, table=True):
 class TaskRead(TaskBase):
     """Schema for reading basic task data."""
     id: int
+    user_id: Optional[str] = None
 
 
 class TaskReadWithAssignees(TaskRead):

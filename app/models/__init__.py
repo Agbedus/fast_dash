@@ -6,6 +6,7 @@ from .auth_models import Account, Session as UserSession
 from .note import Note
 from .note_share import NoteShare
 from .event import Event, Decision
+from .notification import Notification
 
 __all__ = [
     "User", "UserRole", 
@@ -14,5 +15,6 @@ __all__ = [
     "Task", "TaskAssignee",
     "Account", "UserSession",
     "Note", "NoteShare",
-    "Event", "Decision"
+    "Event", "Decision",
+    "Notification"
 ]

@@ -11,6 +11,8 @@ from app.db.session import get_db
 from app.models.project import Project
 from app.models.user import User, UserRole
 from app.api import deps
+from app.services.notifications import NotificationService
+import asyncio
 
 router = APIRouter()
 
@@ -85,7 +87,7 @@ def read_project(
 
 
 @router.post("", response_model=Project)
-def create_project(
+async def create_project(
     project: Project,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -110,11 +112,22 @@ def create_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="New Project Created", 
+        message=f"Project '{project.name}' was created by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="project",
+        resource_id=project.id
+    )
+    
     return project
 
 
 @router.patch("/{project_id}", response_model=Project)
-def update_project(
+async def update_project(
     project_id: int,
     project_update: dict,
     db: Session = Depends(get_db),
@@ -154,6 +167,17 @@ def update_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Project Updated", 
+        message=f"Project '{project.name}' was updated by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="project",
+        resource_id=project.id
+    )
+    
     return project
 
 

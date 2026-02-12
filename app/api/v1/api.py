@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, health, users, user_admin, admin_db,
-    clients, projects, tasks, notes, events, decisions
+    clients, projects, tasks, notes, events, decisions,
+    notifications
 )
 
 api_router = APIRouter()
@@ -13,6 +14,7 @@ api_router.include_router(user_admin.router, prefix="/user-admin", tags=["admin"
 api_router.include_router(admin_db.router, prefix="/admin-db", tags=["admin-db"])
 
 # Resource endpoints
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(clients.router, prefix="/clients", tags=["clients"])
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])

@@ -14,6 +14,8 @@ from app.models.note_share import NoteShare
 from app.models.note import Note, NoteReadWithShared
 from app.models.user import User, UserRole
 from app.api import deps
+from app.services.notifications import NotificationService
+import asyncio
 
 router = APIRouter()
 
@@ -110,7 +112,7 @@ def read_note(
 
 
 @router.post("", response_model=NoteReadWithShared)
-def create_note(
+async def create_note(
     note_data: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -159,11 +161,35 @@ def create_note(
         db.exec(select(Note).where(Note.id == note.id).options(selectinload(Note.shared_with))).first()
         db.refresh(note)
     
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="New Note Created", 
+        message=f"Note '{note.title}' was created by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="note",
+        resource_id=note.id
+    )
+    
+    # Notify Shared Users
+    if shared_user_ids:
+        for user_id in shared_user_ids:
+            await NotificationService.send_notification(
+                db, 
+                recipient_id=user_id,
+                title="Note Shared with You",
+                message=f"Access shared for note: '{note.title}'",
+                type="info",
+                sender_id=current_user.id,
+                resource_type="note",
+                resource_id=note.id
+            )
+            
     return note
 
 
 @router.patch("/{note_id}", response_model=NoteReadWithShared)
-def update_note(
+async def update_note(
     note_id: int,
     note_update: dict,
     db: Session = Depends(get_db),
@@ -229,6 +255,31 @@ def update_note(
         db.exec(select(Note).where(Note.id == note_id).options(selectinload(Note.shared_with))).first()
 
     db.refresh(note)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Note Updated", 
+        message=f"Note '{note.title}' was updated by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="note",
+        resource_id=note.id
+    )
+    
+    # Notify New Shared Users if updated
+    if shared_user_ids is not None:
+        for user_id in shared_user_ids:
+            await NotificationService.send_notification(
+                db, 
+                recipient_id=user_id,
+                title="Note Sharing Updated",
+                message=f"You now have access to note: '{note.title}'",
+                type="info",
+                sender_id=current_user.id,
+                resource_type="note",
+                resource_id=note.id
+            )
+
     return note
 
 

@@ -14,11 +14,12 @@ from app.models.user import User, UserRole
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
 from app.schemas.auth import Token, UserRegister
+from app.services.notifications import NotificationService
 
 router = APIRouter()
 
 @router.post("/register", response_model=User)
-def register_user(user_in: UserRegister, db: Session = Depends(get_db)):
+async def register_user(user_in: UserRegister, db: Session = Depends(get_db)):
     """
     Register a new user account.
     
@@ -49,10 +50,21 @@ def register_user(user_in: UserRegister, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Notify Super Admins of new registration
+    await NotificationService.notify_super_admins(
+        db, 
+        title="New User Registration", 
+        message=f"A new user has registered: {db_user.email}",
+        type="info",
+        resource_type="user",
+        resource_id=db_user.id
+    )
+    
     return db_user
 
 @router.post("/login", response_model=Token)
-def login(response: Response, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(response: Response, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authenticate a user and issue an access token.
     
@@ -94,6 +106,16 @@ def login(response: Response, db: Session = Depends(get_db), form_data: OAuth2Pa
         httponly=True,  # Cannot be accessed via JavaScript
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert minutes to seconds
         samesite="lax"  # CSRF protection
+    )
+    
+    # Notify Super Admins of login
+    await NotificationService.notify_super_admins(
+        db, 
+        title="User Login", 
+        message=f"User logged in: {user.email}",
+        type="info",
+        resource_type="user",
+        resource_id=user.id
     )
     
     return {"access_token": access_token, "token_type": "bearer"}

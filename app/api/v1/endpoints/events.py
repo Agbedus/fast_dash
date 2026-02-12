@@ -14,6 +14,8 @@ from app.db.session import get_db
 from app.models.event import Event, EventRead, EventCreate, EventUpdate
 from app.models.user import User, UserRole
 from app.api import deps
+from app.services.notifications import NotificationService
+import asyncio
 
 router = APIRouter()
 
@@ -86,7 +88,7 @@ def read_event(
 
 
 @router.post("", response_model=EventRead)
-def create_event(
+async def create_event(
     event_in: EventCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -127,11 +129,22 @@ def create_event(
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="New Event Created", 
+        message=f"Event '{db_event.title}' was created by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="event",
+        resource_id=db_event.id
+    )
+    
     return db_event
 
 
 @router.patch("/{event_id}", response_model=EventRead)
-def update_event(
+async def update_event(
     event_id: int,
     event_in: EventUpdate,
     db: Session = Depends(get_db),
@@ -185,6 +198,17 @@ def update_event(
     db.add(event)
     db.commit()
     db.refresh(event)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Event Updated", 
+        message=f"Event '{event.title}' was updated by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="event",
+        resource_id=event.id
+    )
+    
     return event
 
 

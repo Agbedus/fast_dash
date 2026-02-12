@@ -11,6 +11,8 @@ from app.db.session import get_db, engine
 from app.models.task import Task, TaskAssignee, TaskReadWithAssignees
 from app.models.user import User, UserRole
 from app.api import deps
+from app.services.notifications import NotificationService
+import asyncio
 
 router = APIRouter()
 
@@ -101,7 +103,7 @@ def read_task(
 
 
 @router.post("", response_model=TaskReadWithAssignees)
-def create_task(
+async def create_task(
     task_data: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -141,11 +143,36 @@ def create_task(
             connection.commit()
     
     db.refresh(task)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="New Task Created", 
+        message=f"Task '{task.name}' was created by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="task",
+        resource_id=task.id
+    )
+    
+    # Notify Assignees
+    if assignee_ids:
+        for user_id in assignee_ids:
+            await NotificationService.send_notification(
+                db, 
+                recipient_id=user_id,
+                title="New Task Assigned",
+                message=f"You have been assigned to task: '{task.name}'",
+                type="info",
+                sender_id=current_user.id,
+                resource_type="task",
+                resource_id=task.id
+            )
+            
     return task
 
 
 @router.patch("/{task_id}", response_model=TaskReadWithAssignees)
-def update_task(
+async def update_task(
     task_id: int,
     task_update: dict,
     db: Session = Depends(get_db),
@@ -193,6 +220,31 @@ def update_task(
             connection.commit()
     
     db.refresh(task)
+    
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Task Updated", 
+        message=f"Task '{task.name}' was updated by {current_user.full_name or current_user.email}",
+        sender_id=current_user.id,
+        resource_type="task",
+        resource_id=task.id
+    )
+    
+    # Notify New Assignees if updated
+    if assignee_ids is not None:
+        for user_id in assignee_ids:
+            await NotificationService.send_notification(
+                db, 
+                recipient_id=user_id,
+                title="Task Assignment Updated",
+                message=f"You are assigned to task: '{task.name}'",
+                type="info",
+                sender_id=current_user.id,
+                resource_type="task",
+                resource_id=task.id
+            )
+
     return task
 
 

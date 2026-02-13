@@ -14,6 +14,7 @@ from app.models.note import Note, NoteShare
 from app.models.event import Event
 from app.core.security import get_password_hash
 from app.api.deps import get_current_user
+from app.services.user_service import UserService
 
 router = APIRouter()
 
@@ -93,8 +94,7 @@ def delete_user_route(user_id: str, request: Request, db: Session = Depends(get_
     if target_user.id == user.id:
         raise HTTPException(status_code=400, detail="You cannot delete yourself")
         
-    db.delete(target_user)
-    db.commit()
+    UserService.safe_delete_user(db, target_user)
     return {"status": "success"}
 
 @router.get("/", include_in_schema=False)
@@ -135,15 +135,19 @@ def root(request: Request, db: Session = Depends(get_db)):
     )
 
 @router.get("/database", include_in_schema=False)
-def database_explorer(request: Request, table_name: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db)):
+def database_explorer(
+    request: Request, 
+    table_name: Optional[str] = None, 
+    q: Optional[str] = None, 
+    page: int = 1,
+    db: Session = Depends(get_db)
+):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login")
     
     # Check permissions
     if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles:
-        # If not admin, maybe just reject or show empty? 
-        # For now, let's redirect to home with a query param or something, or just raise 403
         raise HTTPException(status_code=403, detail="Not authorized to view database explorer")
 
     inspector = inspect(engine)
@@ -154,6 +158,15 @@ def database_explorer(request: Request, table_name: Optional[str] = None, q: Opt
     rows = []
     pk_column = "id" # default guess
     db_summary = {}
+    
+    pagination = {
+        "page": page,
+        "total_records": 0,
+        "total_pages": 0,
+        "page_size": 50,
+        "has_next": False,
+        "has_prev": page > 1
+    }
     
     if not current_table:
         # Fetch stats for all tables
@@ -238,13 +251,23 @@ def database_explorer(request: Request, table_name: Optional[str] = None, q: Opt
                 if 'creator' not in columns:
                     columns.append('creator')
             
+            # Filter rows based on search query
             if q:
-                rows = [
+                filtered_rows = [
                     row for row in all_rows 
                     if any(str(val).lower().find(q.lower()) != -1 for val in row.values())
                 ]
             else:
-                rows = all_rows
+                filtered_rows = all_rows
+
+            # Apply pagination after search filtering
+            pagination["total_records"] = len(filtered_rows)
+            pagination["total_pages"] = (pagination["total_records"] + 49) // 50
+            pagination["has_next"] = page < pagination["total_pages"]
+            
+            start_idx = (page - 1) * 50
+            end_idx = start_idx + 50
+            rows = filtered_rows[start_idx:end_idx]
 
     # Fetch simple lists for dropdowns (id, display_name)
     # We catch errors just in case tables don't exist yet to avoid 500s during setup
@@ -315,6 +338,7 @@ def database_explorer(request: Request, table_name: Optional[str] = None, q: Opt
             "pk_column": pk_column,
             "rows": rows,
             "q": q or "",
+            "pagination": pagination,
             "fk_data": fk_data,
             "field_options": field_options.get(current_table, {}),
             "multi_select_fields": multi_select_fields.get(current_table, {}),

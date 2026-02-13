@@ -7,10 +7,11 @@ manage their own profile.
 """
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session, select, text
 from app.api import deps
 from app.db.session import get_db
-from app.models.user import User, UserRole
+from app.models import User, UserRole, Notification, TaskAssignee, NoteShare, Account, UserSession
+from app.services.user_service import UserService
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.core.security import get_password_hash
 
@@ -263,14 +264,7 @@ def delete_user(
             status_code=400, detail="Users cannot delete themselves"
         )
     
-    # Unattach related resources instead of deleting them (cascading is removed in model)
-    # Using SQL directly is efficient for bulk updates
-    db.execute(text("UPDATE projects SET owner_id = NULL WHERE owner_id = :user_id"), {"user_id": user_id})
-    db.execute(text("UPDATE tasks SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
-    db.execute(text("UPDATE events SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
-    db.execute(text("UPDATE decisions SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
-    db.execute(text("UPDATE notes SET user_id = NULL WHERE user_id = :user_id"), {"user_id": user_id})
+    # Use centralized service for safe deletion
+    UserService.safe_delete_user(db, user)
     
-    db.delete(user)
-    db.commit()
     return user

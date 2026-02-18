@@ -44,15 +44,32 @@
                 </div>
             </div>
 
-             <!-- Location -->
-            <div>
-                 <label class="block text-sm font-medium text-slate-300 mb-2">Location</label>
-                 <input type="text" name="location" value="{{ event.location or '' }}"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- Location -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                     <label class="block text-sm font-medium text-slate-300 mb-2">Location</label>
+                     <input type="text" name="location" value="{{ event.location or '' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Event Color</label>
+                    <div class="flex gap-2">
+                        <input type="color" name="color" value="{{ event.color or '#6366f1' }}"
+                               class="h-10 w-20 bg-white/5 border border-white/10 rounded-lg p-1 cursor-pointer">
+                        <input type="text" readonly value="{{ event.color or '#6366f1' }}"
+                               class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-400 text-xs font-mono">
+                    </div>
+                </div>
             </div>
 
             <!-- Settings -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="flex items-end pb-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="all_day" class="form-checkbox text-indigo-600 rounded bg-slate-800 border-white/10" {% if event.all_day %}checked{% endif %}>
+                        <span class="text-sm text-slate-300">All Day Event</span>
+                    </label>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Status</label>
                     <select name="status" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -79,6 +96,14 @@
                         <option value="yearly" {% if event.recurrence == 'yearly' %}selected{% endif %}>Yearly</option>
                     </select>
                 </div>
+            </div>
+
+            <!-- Reminders -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Reminders (JSON format)</label>
+                <textarea name="reminders" rows="2" placeholder='[{"days": 0, "hours": 1, "minutes": 0}]'
+                          class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ event.reminders or '' }}</textarea>
+                <p class="text-[10px] text-slate-500 mt-1">Configure automated notifications before the event starts.</p>
             </div>
 
             <div class="pt-4 border-t border-white/10 flex justify-end gap-3">

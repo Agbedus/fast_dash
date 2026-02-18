@@ -4,20 +4,21 @@ Task Endpoints Module
 This module provides CRUD endpoints for managing tasks with multi-user assignment support.
 Tasks use a many-to-many relationship with users through the TaskAssignee junction table.
 """
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, text
 from app.db.session import get_db, engine
-from app.models.task import Task, TaskAssignee, TaskReadWithAssignees
+from app.models.task import Task, TaskAssignee, TaskReadWithAssignees, TaskStatus, TaskTimeLog, TaskReadWithTimeLogs
 from app.models.user import User, UserRole
 from app.api import deps
 from app.services.notifications import NotificationService
+from datetime import datetime
 import asyncio
 
 router = APIRouter()
 
 
-@router.get("", response_model=List[TaskReadWithAssignees])
+@router.get("", response_model=List[TaskReadWithTimeLogs])
 def list_tasks(
     skip: int = 0,
     limit: int = 100,
@@ -60,7 +61,7 @@ def list_tasks(
     return tasks
 
 
-@router.get("/{task_id}", response_model=TaskReadWithAssignees)
+@router.get("/{task_id}", response_model=TaskReadWithTimeLogs)
 def read_task(
     task_id: int,
     db: Session = Depends(get_db),
@@ -102,7 +103,7 @@ def read_task(
     return task
 
 
-@router.post("", response_model=TaskReadWithAssignees)
+@router.post("", response_model=TaskReadWithTimeLogs)
 async def create_task(
     task_data: dict,
     db: Session = Depends(get_db),
@@ -171,7 +172,7 @@ async def create_task(
     return task
 
 
-@router.patch("/{task_id}", response_model=TaskReadWithAssignees)
+@router.patch("/{task_id}", response_model=TaskReadWithTimeLogs)
 async def update_task(
     task_id: int,
     task_update: dict,
@@ -279,3 +280,118 @@ def delete_task(
     db.delete(task)
     db.commit()
     return {"status": "success", "detail": "Task deleted"}
+
+
+@router.post("/{task_id}/timer/start")
+async def start_task_timer(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+):
+    """
+    Starts a new time tracking session for a task.
+    Automatically pauses any other active sessions for the user.
+    """
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # 1. Close any other active sessions for this user (across all tasks)
+    active_sessions = db.exec(
+        select(TaskTimeLog).where(
+            TaskTimeLog.user_id == current_user.id,
+            TaskTimeLog.end_time == None
+        )
+    ).all()
+    
+    for session in active_sessions:
+        session.end_time = datetime.utcnow().isoformat()
+        db.add(session)
+    
+    # 2. Create new session for this task
+    new_session = TaskTimeLog(
+        task_id=task_id,
+        user_id=current_user.id,
+        start_time=datetime.utcnow().isoformat()
+    )
+    
+    # Automatically move task to IN_PROGRESS if it's in TODO
+    if task.status == TaskStatus.TODO:
+        task.status = TaskStatus.IN_PROGRESS
+        db.add(task)
+    
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+    
+    return new_session
+
+
+@router.post("/{task_id}/timer/pause")
+async def pause_task_timer(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+):
+    """
+    Pauses (ends) the current active session.
+    """
+    active_session = db.exec(
+        select(TaskTimeLog).where(
+            TaskTimeLog.task_id == task_id,
+            TaskTimeLog.user_id == current_user.id,
+            TaskTimeLog.end_time == None
+        )
+    ).first()
+    
+    if not active_session:
+        raise HTTPException(status_code=400, detail="No active session found for this task")
+    
+    active_session.end_time = datetime.utcnow().isoformat()
+    # Note: We don't mark as is_break here. Pausing simply ends the work session.
+    
+    db.add(active_session)
+    db.commit()
+    db.refresh(active_session)
+    
+    return active_session
+
+
+@router.post("/{task_id}/timer/stop")
+async def stop_task_timer(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+):
+    """
+    Stops (ends) the current active session.
+    """
+    active_session = db.exec(
+        select(TaskTimeLog).where(
+            TaskTimeLog.task_id == task_id,
+            TaskTimeLog.user_id == current_user.id,
+            TaskTimeLog.end_time == None
+        )
+    ).first()
+    
+    if not active_session:
+        # Check if there was any recent session
+        last_session = db.exec(
+            select(TaskTimeLog).where(
+                TaskTimeLog.task_id == task_id,
+                TaskTimeLog.user_id == current_user.id
+            ).order_by(text("start_time DESC"))
+        ).first()
+        
+        if not last_session:
+            raise HTTPException(status_code=400, detail="No session found for this task")
+        
+        return last_session
+    
+    active_session.end_time = datetime.utcnow().isoformat()
+    
+    db.add(active_session)
+    db.commit()
+    db.refresh(active_session)
+    
+    return active_session

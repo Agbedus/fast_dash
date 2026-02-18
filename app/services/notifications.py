@@ -2,8 +2,9 @@ from typing import Dict, List, Optional
 from fastapi import WebSocket
 from sqlmodel import Session, select
 from app.models.notification import Notification
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
+from sqlmodel import Session, select, delete
 
 class ConnectionManager:
     """
@@ -49,6 +50,29 @@ class NotificationService:
         resource_type: Optional[str] = None,
         resource_id: Optional[str] = None
     ) -> Notification:
+        # Deduplication logic: Check if a similar notification exists within the last hour
+        one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+        
+        existing = db.exec(
+            select(Notification).where(
+                Notification.recipient_id == recipient_id,
+                Notification.title == title,
+                Notification.message == message,
+                Notification.resource_type == resource_type,
+                Notification.resource_id == resource_id,
+                Notification.created_at >= one_hour_ago
+            )
+        ).first()
+
+        if existing:
+            # Update timestamp and mark as unread if it was already read
+            existing.created_at = datetime.utcnow().isoformat()
+            existing.is_read = False
+            db.add(existing)
+            db.commit()
+            db.refresh(existing)
+            return existing
+
         db_notification = Notification(
             recipient_id=recipient_id,
             sender_id=sender_id,
@@ -62,6 +86,31 @@ class NotificationService:
         db.commit()
         db.refresh(db_notification)
         return db_notification
+
+    @staticmethod
+    def cleanup_old_notifications(db: Session):
+        """
+        Deletes old notifications to prevent database bloat.
+        - Read notifications older than 7 days.
+        - All notifications older than 30 days.
+        """
+        seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+        thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+
+        # Delete read notifications older than 7 days
+        stmt1 = delete(Notification).where(
+            Notification.is_read == True,
+            Notification.created_at < seven_days_ago
+        )
+        db.exec(stmt1)
+
+        # Delete all notifications older than 30 days
+        stmt2 = delete(Notification).where(
+            Notification.created_at < thirty_days_ago
+        )
+        db.exec(stmt2)
+        
+        db.commit()
 
     @staticmethod
     async def send_notification(

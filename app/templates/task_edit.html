@@ -35,10 +35,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Status</label>
                     <select name="status" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="task" {% if task.status == 'task' %}selected{% endif %}>Task</option>
-                        <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                        <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>Completed</option>
-                        <option value="waiting" {% if task.status == 'waiting' %}selected{% endif %}>Waiting</option>
+                        {% for status in statuses %}
+                        <option value="{{ status }}" {% if task.status == status %}selected{% endif %}>{{ status|title }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div>
@@ -51,17 +50,31 @@
                 </div>
             </div>
 
+            <!-- Validation Flags -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex items-center gap-3 p-4 rounded-xl glass border-slate-800/50">
+                    <input type="checkbox" name="qa_required" id="qa_required" {% if task.qa_required %}checked{% endif %}
+                           class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500">
+                    <label for="qa_required" class="text-sm font-medium text-slate-300">QA Required</label>
+                </div>
+                <div class="flex items-center gap-3 p-4 rounded-xl glass border-slate-800/50">
+                    <input type="checkbox" name="review_required" id="review_required" {% if task.review_required %}checked{% endif %}
+                           class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500">
+                    <label for="review_required" class="text-sm font-medium text-slate-300">Review Required</label>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Project</label>
-                    <select name="project_id" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">No Project</option>
-                        {% for p in projects %}
-                        <option value="{{ p.id }}" {% if task.project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Depends On</label>
+                    <select name="depends_on_id" class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="None">No Dependency</option>
+                        {% for d in dependencies %}
+                        <option value="{{ d.id }}" {% if task.depends_on_id == d.id %}selected{% endif %}>#{{ d.id }} - {{ d.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                 <div>
+                <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Due Date</label>
                     <input type="date" name="due_date" value="{{ task.due_date or '' }}"
                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">

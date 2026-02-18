@@ -8,13 +8,14 @@ from app.db.session import engine, get_db
 from sqlmodel import Session, select
 from app.models.user import User, UserRole
 from app.models.project import Project
-from app.models.task import Task, TaskAssignee
+from app.models.task import Task, TaskAssignee, TaskStatus, TaskTimeLog
 from app.models.client import Client
 from app.models.note import Note, NoteShare
 from app.models.event import Event
 from app.core.security import get_password_hash
 from app.api.deps import get_current_user
 from app.services.user_service import UserService
+from app.services.notifications import NotificationService
 
 router = APIRouter()
 
@@ -307,7 +308,7 @@ def database_explorer(
             "billing_type": ["non_billable", "hourly", "fixed_cost"]
         },
         "tasks": {
-            "status": ["task", "in_progress", "completed", "waiting"],
+            "status": [s.value for s in TaskStatus],
             "priority": ["low", "medium", "high"]
         },
         "events": {
@@ -440,6 +441,16 @@ async def project_edit_submit(
     db.commit()
     db.refresh(project)
     
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Project Updated", 
+        message=f"Project '{project.name}' was updated by {user.full_name or user.email}",
+        sender_id=user.id,
+        resource_type="project",
+        resource_id=project.id
+    )
+    
     return RedirectResponse(url=f"/projects/{project_id}", status_code=303)
 
 @router.post("/projects/{project_id}/delete", include_in_schema=False)
@@ -478,6 +489,18 @@ def task_detail_page(request: Request, task_id: int, db: Session = Depends(get_d
     assignees_stmt = select(User).join(TaskAssignee, User.id == TaskAssignee.user_id).where(TaskAssignee.task_id == task_id)
     assignees = db.exec(assignees_stmt).all()
 
+    # Fetch time logs
+    time_logs = db.exec(select(TaskTimeLog).where(TaskTimeLog.task_id == task_id).order_by(desc(TaskTimeLog.start_time))).all()
+
+    # Check for active timer
+    active_timer = db.exec(
+        select(TaskTimeLog).where(
+            TaskTimeLog.task_id == task_id,
+            TaskTimeLog.user_id == user.id,
+            TaskTimeLog.end_time == None
+        )
+    ).first()
+
     return templates.TemplateResponse(
         "task_detail.html", 
         {
@@ -486,6 +509,8 @@ def task_detail_page(request: Request, task_id: int, db: Session = Depends(get_d
             "task": task,
             "project": project,
             "assignees": assignees,
+            "time_logs": time_logs,
+            "active_timer": active_timer,
             "tables": get_tables()
         }
     )
@@ -505,6 +530,12 @@ def task_edit_page(request: Request, task_id: int, db: Session = Depends(get_db)
     
     # Get current assignee IDs
     assignee_ids = [ta.user_id for ta in task.task_assignees]
+
+    # Fetch potential dependencies (tasks in same project or all tasks)
+    stmt = select(Task).where(Task.id != task_id)
+    if task.project_id:
+        stmt = stmt.where(Task.project_id == task.project_id)
+    dependencies = db.exec(stmt).all()
     
     return templates.TemplateResponse(
         "task_edit.html",
@@ -515,6 +546,8 @@ def task_edit_page(request: Request, task_id: int, db: Session = Depends(get_db)
             "projects": projects,
             "users": users,
             "current_assignee_ids": assignee_ids,
+            "dependencies": dependencies,
+            "statuses": [s.value for s in TaskStatus],
             "tables": get_tables()
         }
     )
@@ -544,6 +577,13 @@ async def task_edit_submit(
     
     project_id_val = form.get("project_id")
     task.project_id = int(project_id_val) if project_id_val else None
+
+    # New fields
+    task.qa_required = form.get("qa_required") == "on"
+    task.review_required = form.get("review_required") == "on"
+    
+    depends_on_val = form.get("depends_on_id")
+    task.depends_on_id = int(depends_on_val) if depends_on_val and depends_on_val != "None" else None
     
     # Update assignments
     # First remove existing
@@ -561,6 +601,30 @@ async def task_edit_submit(
     db.commit()
     db.refresh(task)
     
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Task Updated", 
+        message=f"Task '{task.name}' was updated by {user.full_name or user.email}",
+        sender_id=user.id,
+        resource_type="task",
+        resource_id=task.id
+    )
+    
+    # Notify New Assignees
+    if assignee_ids:
+        for user_id in assignee_ids:
+            await NotificationService.send_notification(
+                db, 
+                recipient_id=user_id,
+                title="Task Assignment Updated",
+                message=f"You are assigned to task: '{task.name}'",
+                type="info",
+                sender_id=user.id,
+                resource_type="task",
+                resource_id=task.id
+            )
+
     return RedirectResponse(url=f"/tasks/{task_id}", status_code=303)
 
 @router.post("/tasks/{task_id}/delete", include_in_schema=False)
@@ -686,12 +750,22 @@ def event_detail_page(request: Request, event_id: int, db: Session = Depends(get
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
+    # Parse reminders for display
+    import json
+    reminders_list = []
+    if event.reminders:
+        try:
+            reminders_list = json.loads(event.reminders)
+        except:
+            pass
+
     return templates.TemplateResponse(
         "event_detail.html", 
         {
             "request": request, 
             "current_user": user,
             "event": event,
+            "reminders_list": reminders_list,
             "tables": get_tables()
         }
     )
@@ -741,11 +815,24 @@ async def event_edit_submit(
     event.status = form.get("status")
     event.privacy = form.get("privacy")
     event.recurrence = form.get("recurrence")
+    event.color = form.get("color")
+    event.all_day = 1 if form.get("all_day") == "on" else 0
+    event.reminders = form.get("reminders") or None
     
     db.add(event)
     db.commit()
     db.refresh(event)
     
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Event Updated", 
+        message=f"Event '{event.title}' was updated by {user.full_name or user.email}",
+        sender_id=user.id,
+        resource_type="event",
+        resource_id=event.id
+    )
+
     return RedirectResponse(url=f"/events/{event_id}", status_code=303)
 
 @router.post("/events/{event_id}/delete", include_in_schema=False)
@@ -865,6 +952,30 @@ async def note_edit_submit(
     db.commit()
     db.refresh(note)
     
+    # Notify Super Admins and Managers
+    await NotificationService.notify_managers(
+        db, 
+        title="Note Updated", 
+        message=f"Note '{note.title}' was updated by {user.full_name or user.email}",
+        sender_id=user.id,
+        resource_type="note",
+        resource_id=note.id
+    )
+    
+    # Notify New Shared Users
+    if shared_ids:
+        for user_id in shared_ids:
+            await NotificationService.send_notification(
+                db, 
+                recipient_id=user_id,
+                title="Note Sharing Updated",
+                message=f"You now have access to note: '{note.title}'",
+                type="info",
+                sender_id=user.id,
+                resource_type="note",
+                resource_id=note.id
+            )
+
     return RedirectResponse(url=f"/notes/{note_id}", status_code=303)
 
 @router.post("/notes/{note_id}/delete", include_in_schema=False)

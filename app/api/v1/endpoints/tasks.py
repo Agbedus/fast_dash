@@ -290,7 +290,7 @@ async def start_task_timer(
 ):
     """
     Starts a new time tracking session for a task.
-    Automatically pauses any other active sessions for the user.
+    Automatically stops any other active sessions for the user.
     """
     task = db.get(Task, task_id)
     if not task:
@@ -334,7 +334,8 @@ async def pause_task_timer(
     current_user: User = Depends(deps.get_current_active_user),
 ):
     """
-    Pauses (ends) the current active session.
+    Pauses the current active session.
+    Equivalent to stopping it but conceptually marked as a pause in the UI.
     """
     active_session = db.exec(
         select(TaskTimeLog).where(
@@ -345,10 +346,9 @@ async def pause_task_timer(
     ).first()
     
     if not active_session:
-        raise HTTPException(status_code=400, detail="No active session found for this task")
+        raise HTTPException(status_code=400, detail="No active session found to pause")
     
     active_session.end_time = datetime.utcnow().isoformat()
-    # Note: We don't mark as is_break here. Pausing simply ends the work session.
     
     db.add(active_session)
     db.commit()
@@ -389,6 +389,9 @@ async def stop_task_timer(
         return last_session
     
     active_session.end_time = datetime.utcnow().isoformat()
+    
+    # Also move task to DONE if appropriate? 
+    # For now, just stop the timer as per current logic.
     
     db.add(active_session)
     db.commit()

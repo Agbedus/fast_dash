@@ -33,9 +33,6 @@
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
                 {% else %}
-                <button onclick="handleTimer('pause')" class="w-10 h-10 rounded-full bg-amber-500 hover:bg-amber-400 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 transition-all active:scale-90">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                </button>
                 <button onclick="handleTimer('stop')" class="w-10 h-10 rounded-full bg-rose-500 hover:bg-rose-400 text-white flex items-center justify-center shadow-lg shadow-rose-500/20 transition-all active:scale-90">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
                 </button>
@@ -275,7 +272,6 @@
                                                             <tr>
                                                                 <th class="px-6 py-4">Session Start</th>
                                                                 <th class="px-6 py-4">Session End</th>
-                                                                <th class="px-6 py-4">Type</th>
                                                                 <th class="px-6 py-4 text-right">Duration</th>
                                                             </tr>
                                                         </thead>
@@ -289,13 +285,6 @@
                                                                             {{ log.end_time[11:19] }} <span class="text-[9px] text-slate-500 ml-1">{{ log.end_time[:10] }}</span>
                                                                         {% else %}
                                                                             <span class="text-emerald-400 animate-pulse">Active...</span>
-                                                                        {% endif %}
-                                                                    </td>
-                                                                    <td class="px-6 py-4">
-                                                                        {% if log.is_break %}
-                                                                            <span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold">BREAK</span>
-                                                                        {% else %}
-                                                                            <span class="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-bold">WORK</span>
                                                                         {% endif %}
                                                                     </td>
                                                                     <td class="px-6 py-4 text-right font-mono font-bold text-slate-200">

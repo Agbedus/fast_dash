@@ -51,8 +51,6 @@ class TaskTimeLog(SQLModel, table=True):
     start_time: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     end_time: Optional[str] = None
     
-    is_break: bool = Field(default=False)
-    
     # Relationship to task
     task: "Task" = Relationship(back_populates="time_logs")
 
@@ -119,12 +117,12 @@ class Task(TaskBase, table=True):
 
     @property
     def total_hours(self) -> float:
-        """Calculates total hours spent on task excluding breaks."""
+        """Calculates total hours spent on task."""
         if not self.time_logs:
             return 0.0
         total_seconds = 0
         for log in self.time_logs:
-            if not log.is_break and log.start_time and log.end_time:
+            if log.start_time and log.end_time:
                 try:
                     start = datetime.fromisoformat(log.start_time)
                     end = datetime.fromisoformat(log.end_time)
@@ -149,3 +147,25 @@ class TaskReadWithTimeLogs(TaskReadWithAssignees):
     """Schema for reading task data with its time logs."""
     time_logs: List["TaskTimeLog"] = []
     total_hours: float = 0.0
+
+
+class TaskTimeLogCreate(SQLModel):
+    """Schema for creating a new time log entry."""
+    task_id: int
+    start_time: str
+    end_time: Optional[str] = None
+
+
+class TaskTimeLogUpdate(SQLModel):
+    """Schema for updating an existing time log entry."""
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+
+
+class TaskTimeLogRead(SQLModel):
+    """Schema for reading time log entry."""
+    id: int
+    task_id: int
+    user_id: str
+    start_time: str
+    end_time: Optional[str] = None

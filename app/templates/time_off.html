@@ -1,0 +1,233 @@
+{% extends "base.html" %} {% block title %}Fast Dash - Leave Management{% endblock %}
+{% block content %}
+<div class="min-h-screen p-6">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <header class="mb-8 flex justify-between items-end">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-100 mb-2 tracking-tight">
+          Leave <span class="text-blue-400">& Time-Off</span>
+        </h1>
+        <p class="text-slate-400 text-sm font-medium">
+          Manage your requests and track your availability
+        </p>
+      </div>
+      <div class="glass-elevated px-6 py-3 rounded-xl border-l-4 border-emerald-500">
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Leave Remaining</div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-3xl font-black text-slate-100">{{ days_remaining }}</span>
+          <span class="text-xs font-bold text-emerald-400">/ 15 Days</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Request Form -->
+      <div class="lg:col-span-1">
+        <div class="glass-elevated rounded-2xl overflow-hidden animate__animated animate__fadeInLeft">
+          <div class="px-6 py-4 border-b border-slate-700/50 bg-slate-800/30">
+            <h3 class="text-sm font-bold text-slate-100 uppercase tracking-widest">New Request</h3>
+          </div>
+          <form id="timeOffForm" class="p-6 space-y-4">
+            <div class="space-y-1.5">
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Request Type</label>
+              <select name="type" class="w-full px-4 py-2.5 seamless rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+                {% for t in types %}
+                <option value="{{ t }}">{{ t|capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Start Date</label>
+                <input type="date" name="start_date" required class="w-full px-4 py-2.5 seamless rounded-xl text-sm text-slate-100 focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">End Date</label>
+                <input type="date" name="end_date" required class="w-full px-4 py-2.5 seamless rounded-xl text-sm text-slate-100 focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Justification</label>
+              <textarea name="justification" rows="3" placeholder="Explain the reason for your request..." class="w-full px-4 py-2.5 seamless rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all min-h-[100px]"></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              Submit Request
+            </button>
+            <div id="formError" class="p-3 bg-red-500/10 text-red-400 text-xs font-semibold rounded-lg hidden"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Requests List -->
+      <div class="lg:col-span-2">
+        <div class="glass-elevated rounded-2xl overflow-hidden animate__animated animate__fadeInRight">
+          <div class="px-6 py-4 border-b border-slate-700/50 bg-slate-800/30 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-100 uppercase tracking-widest">History & Status</h3>
+            <span class="px-3 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold rounded-full uppercase tracking-widest border border-blue-500/20">All Time</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-slate-800/50">
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">User</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Duration</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Type</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-700/30">
+                {% for req in requests %}
+                <tr class="interactive-item hover:bg-slate-800/20 transition-all">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-xs border border-blue-500/20">
+                        {{ req.user.full_name[0] if req.user and req.user.full_name else 'U'|upper }}
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-sm font-bold text-slate-200">{{ req.user.full_name or 'System User' }}</span>
+                        <span class="text-[10px] text-slate-500 font-medium">{{ req.requested_at[:10] }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex flex-col">
+                      <span class="text-sm text-slate-300 font-medium">{{ req.start_date }}</span>
+                      <span class="text-xs text-slate-500 leading-none">to {{ req.end_date }}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest 
+                      {% if req.type == 'leave' %}bg-purple-500/10 text-purple-400 border border-purple-500/20
+                      {% elif req.type == 'sick' %}bg-red-500/10 text-red-400 border border-red-500/20
+                      {% elif req.type == 'off' %}bg-amber-500/10 text-amber-400 border border-amber-500/20
+                      {% else %}bg-slate-500/10 text-slate-400 border border-slate-500/20{% endif %}">
+                      {{ req.type }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <span class="w-1.5 h-1.5 rounded-full 
+                        {% if req.status == 'approved' %}bg-emerald-500 animate-pulse
+                        {% elif req.status == 'rejected' %}bg-red-500
+                        {% else %}bg-amber-500{% endif %}"></span>
+                      <span class="text-xs font-bold capitalize 
+                        {% if req.status == 'approved' %}text-emerald-400
+                        {% elif req.status == 'rejected' %}text-red-400
+                        {% else %}text-amber-400{% endif %}">
+                        {{ req.status }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    {% if 'super_admin' in current_user.roles and req.status == 'pending' %}
+                    <div class="flex items-center gap-2">
+                      <button onclick="updateStatus({{ req.id }}, 'approve')" class="p-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-all border border-emerald-500/20" title="Approve">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                      </button>
+                      <button onclick="updateStatus({{ req.id }}, 'reject')" class="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all border border-red-500/20" title="Reject">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                    {% elif req.status == 'pending' and req.user_id == current_user.id %}
+                    <button onclick="deleteRequest({{ req.id }})" class="p-1.5 bg-slate-700/50 text-slate-400 hover:bg-red-500 hover:text-white rounded-lg transition-all border border-slate-600/30" title="Cancel Request">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                    {% else %}
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Locked</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+                {% if not requests %}
+                <tr>
+                  <td colspan="5" class="px-6 py-20 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                      <div class="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center text-slate-600 border border-slate-700/50">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      </div>
+                      <p class="text-slate-400 font-medium">No requests found</p>
+                    </div>
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('timeOffForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const error = document.getElementById('formError');
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    error.classList.add('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-spin mr-2">⏳</span> Submitting...';
+
+    try {
+        const res = await fetch('/api/v1/time-off/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            const errData = await res.json();
+            error.innerText = errData.detail || 'Failed to submit request';
+            error.classList.remove('hidden');
+        }
+    } catch (err) {
+        error.innerText = 'Network error occurred';
+        error.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Request';
+    }
+});
+
+async function updateStatus(id, action) {
+    if (!confirm(`Are you sure you want to ${action} this request?`)) return;
+    
+    try {
+        const res = await fetch(`/api/v1/time-off/${id}/${action}`, { method: 'POST' });
+        if (res.ok) window.location.reload();
+        else {
+            const err = await res.json();
+            alert(err.detail || `Failed to ${action} request`);
+        }
+    } catch (err) {
+        alert('Network error occurred');
+    }
+}
+
+async function deleteRequest(id) {
+    if (!confirm('Are you sure you want to cancel this request?')) return;
+    
+    try {
+        const res = await fetch(`/api/v1/time-off/${id}`, { method: 'DELETE' });
+        if (res.ok) window.location.reload();
+        else {
+            const err = await res.json();
+            alert(err.detail || 'Failed to cancel request');
+        }
+    } catch (err) {
+        alert('Network error occurred');
+    }
+}
+</script>
+{% endblock %}

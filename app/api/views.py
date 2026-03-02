@@ -12,6 +12,7 @@ from app.models.task import Task, TaskAssignee, TaskStatus, TaskTimeLog
 from app.models.client import Client
 from app.models.note import Note, NoteShare
 from app.models.event import Event
+from app.models.time_off import TimeOff, TimeOffType, TimeOffStatus
 from app.core.security import get_password_hash
 from app.api.deps import get_current_user
 from app.services.user_service import UserService
@@ -315,6 +316,10 @@ def database_explorer(
              "status": ["tentative", "confirmed", "cancelled"],
              "privacy": ["public", "private", "confidential"],
              "recurrence": ["none", "daily", "weekly", "monthly", "yearly"]
+        },
+        "time_off_requests": {
+             "type": ["leave", "off", "sick", "other"],
+             "status": ["pending", "approved", "rejected"]
         }
     }
 
@@ -325,6 +330,10 @@ def database_explorer(
         },
         "notes": {
             "shared_with": "users"
+        },
+        "time_off_requests": {
+            "user_id": "users",
+            "approved_by": "users"
         }
     }
 
@@ -1000,3 +1009,108 @@ def note_delete(request: Request, note_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return RedirectResponse(url="/database?table_name=notes", status_code=303)
+
+@router.get("/time-off", include_in_schema=False)
+def time_off_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    # Fetch user's requests
+    if UserRole.SUPER_ADMIN in user.roles or UserRole.MANAGER in user.roles:
+        requests = db.exec(select(TimeOff).order_by(desc(TimeOff.requested_at))).all()
+    else:
+        requests = db.exec(select(TimeOff).where(TimeOff.user_id == user.id).order_by(desc(TimeOff.requested_at))).all()
+    
+    # Calculate days remaining for 'leave' type
+    from app.services.time_off_service import TimeOffService
+    days_taken = TimeOffService.calculate_total_leave_days(db, user.id)
+    days_remaining = 15 - days_taken
+
+    return templates.TemplateResponse(
+        "time_off.html", 
+        {
+            "request": request, 
+            "current_user": user,
+            "requests": requests,
+            "days_remaining": days_remaining,
+            "types": [t.value for t in TimeOffType],
+            "tables": get_tables()
+        }
+    )
+
+
+@router.post("/time-off", include_in_schema=False)
+async def time_off_submit(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    form = await request.form()
+    
+    # Map form data to schema
+    from app.schemas.time_off import TimeOffCreate
+    from app.services.time_off_service import TimeOffService
+    
+    request_in = TimeOffCreate(
+        type=form.get("type"),
+        start_date=form.get("start_date"),
+        end_date=form.get("end_date"),
+        justification=form.get("justification") or form.get("reason") # Handle both just in case
+    )
+    
+    try:
+        time_off = TimeOffService.create_request(db, user.id, request_in)
+        from app.services.notifications import NotificationService
+        await NotificationService.notify_managers(
+            db, 
+            title="Time Off Request", 
+            message=f"{user.full_name or user.email} requested time off from {time_off.start_date} to {time_off.end_date}",
+            sender_id=user.id,
+            resource_type="time_off",
+            resource_id=str(time_off.id)
+        )
+    except Exception as e:
+        # In a real app we might want to pass the error back to the template
+        # For now, let's just re-raise or handle simply
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    return RedirectResponse(url="/time-off", status_code=303)
+
+
+@router.patch("/time-off/{request_id}", include_in_schema=False)
+async def time_off_update(request: Request, request_id: int, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    if UserRole.SUPER_ADMIN not in user.roles and UserRole.MANAGER not in user.roles:
+         raise HTTPException(status_code=403, detail="Not authorized to update this time off request")
+    
+    form = await request.form()
+    status_val = form.get("status")
+    
+    from app.services.time_off_service import TimeOffService
+    from app.services.notifications import NotificationService
+    
+    time_off = None
+    if status_val == "approved":
+        time_off = TimeOffService.approve_request(db, request_id, user.id)
+    elif status_val == "rejected":
+        time_off = TimeOffService.reject_request(db, request_id, user.id)
+        
+    if time_off:
+        await NotificationService.send_notification(
+            db, 
+            recipient_id=time_off.user_id,
+            title="Time Off Request Updated",
+            message=f"Your time off request from {time_off.start_date} to {time_off.end_date} has been {time_off.status}",
+            type="info",
+            sender_id=user.id,
+            resource_type="time_off",
+            resource_id=str(time_off.id)
+        )
+    
+    return RedirectResponse(url="/time-off", status_code=303)
+    
+

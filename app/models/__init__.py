@@ -7,6 +7,7 @@ from .note import Note
 from .note_share import NoteShare
 from .event import Event, Decision
 from .notification import Notification
+from .time_off import TimeOff, TimeOffType, TimeOffStatus
 
 __all__ = [
     "User", "UserRole", 
@@ -16,5 +17,6 @@ __all__ = [
     "Account", "UserSession",
     "Note", "NoteShare",
     "Event", "Decision",
-    "Notification"
+    "Notification",
+    "TimeOff", "TimeOffType", "TimeOffStatus"
 ]

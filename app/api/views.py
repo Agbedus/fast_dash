@@ -1112,5 +1112,53 @@ async def time_off_update(request: Request, request_id: int, db: Session = Depen
         )
     
     return RedirectResponse(url="/time-off", status_code=303)
-    
 
+@router.get("/attendance", include_in_schema=False)
+def attendance_dashboard_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    from app.models.attendance import AttendanceRecord, LocationLog, OfficeLocation
+    from datetime import datetime
+    
+    today = datetime.utcnow().date()
+    
+    # Get today's record for current user
+    today_record = db.exec(
+        select(AttendanceRecord)
+        .where(AttendanceRecord.user_id == user.id, AttendanceRecord.work_date == today)
+    ).first()
+    
+    # Get recent location pings for current user
+    recent_logs = db.exec(
+        select(LocationLog)
+        .where(LocationLog.user_id == user.id)
+        .order_by(desc(LocationLog.recorded_at))
+        .limit(10)
+    ).all()
+    
+    # If manager/admin, get team's today records
+    team_records = []
+    if UserRole.MANAGER in user.roles or UserRole.SUPER_ADMIN in user.roles:
+        team_records = db.exec(
+            select(AttendanceRecord, User)
+            .join(User, AttendanceRecord.user_id == User.id)
+            .where(AttendanceRecord.work_date == today)
+            .order_by(desc(AttendanceRecord.clock_in_at))
+        ).all()
+        
+    offices = db.exec(select(OfficeLocation).where(OfficeLocation.is_active == True)).all()
+
+    return templates.TemplateResponse(
+        "attendance.html", 
+        {
+            "request": request, 
+            "current_user": user,
+            "today_record": today_record,
+            "recent_logs": recent_logs,
+            "team_records": team_records,
+            "offices": offices,
+            "tables": get_tables()
+        }
+    )

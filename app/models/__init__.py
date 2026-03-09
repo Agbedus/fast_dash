@@ -8,6 +8,11 @@ from .note_share import NoteShare
 from .event import Event, Decision
 from .notification import Notification
 from .time_off import TimeOff, TimeOffType, TimeOffStatus
+from .attendance import (
+    OfficeLocation, AttendancePolicy, LocationLog, 
+    AttendanceRecord, PresenceStateHistory, AttendanceOverride,
+    PresenceState, AttendanceState
+)
 
 __all__ = [
     "User", "UserRole", 
@@ -18,5 +23,8 @@ __all__ = [
     "Note", "NoteShare",
     "Event", "Decision",
     "Notification",
-    "TimeOff", "TimeOffType", "TimeOffStatus"
+    "TimeOff", "TimeOffType", "TimeOffStatus",
+    "OfficeLocation", "AttendancePolicy", "LocationLog",
+    "AttendanceRecord", "PresenceStateHistory", "AttendanceOverride",
+    "PresenceState", "AttendanceState"
 ]

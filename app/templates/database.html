@@ -3,62 +3,38 @@ endblock %} {% block content %}
 <div class="min-h-screen p-6">
   <div class="max-w-full mx-auto">
     <!-- Header -->
-    <header class="mb-6">
-      <h1 class="text-2xl font-bold text-slate-100 mb-2 tracking-tight">
+    <header class="mb-4">
+      <h1 class="text-xl font-bold text-slate-100 mb-1 tracking-tight">
         {% if current_table %}
         <span class="text-slate-500">Table:</span> {{ current_table }} {% else
         %} Database <span class="text-blue-400">Explorer</span>
         {% endif %}
       </h1>
-      <p class="text-slate-400 text-sm">
+      <p class="text-slate-500 text-xs font-medium">
         Browse and manage your database records
       </p>
     </header>
 
     <!-- Actions Bar -->
     {% if current_table %}
-    <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
-      <form action="/database" method="get" class="max-w-96 relative group">
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+      <form action="/database" method="get" class="max-w-80 relative group">
         <input type="hidden" name="table_name" value="{{ current_table }}" />
         <input
           type="text"
           name="q"
           value="{{ q }}"
           placeholder="Search records..."
-          class="w-full pl-10 pr-4 py-2.5 seamless rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+          class="w-full pl-9 pr-3 py-1.5 seamless rounded-md text-xs text-slate-100 placeholder-slate-500 focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
         />
-        <svg
-          class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors"></i>
       </form>
       {% if 'super_admin' in current_user.roles %}
       <button
         onclick="openCreateModal()"
-        class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-semibold hover:from-blue-500 hover:to-blue-600 transition-all active:scale-98"
+        class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-md text-xs font-semibold hover:from-blue-500 hover:to-blue-600 transition-all active:scale-98"
       >
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
+        <i data-lucide="plus" class="w-3.5 h-3.5 text-white"></i>
         <span>Add Record</span>
       </button>
       {% endif %}
@@ -67,68 +43,56 @@ endblock %} {% block content %}
 
     <!-- Content -->
     {% if current_table %}
-    <div class="glass-elevated rounded-xl overflow-hidden">
-      <div class="overflow-x-auto custom-scrollbar">
-        <table class="w-full text-left">
-          <thead>
-            <tr class="bg-slate-800/50">
+    <div class="glass-elevated rounded-lg overflow-hidden border border-slate-800/50 flex flex-col max-h-[calc(100vh-12rem)]">
+      <div class="overflow-auto custom-scrollbar flex-1">
+        <table class="w-full text-left border-collapse">
+          <thead class="sticky top-0 z-20 bg-slate-900 shadow-sm">
+            <tr class="border-b border-slate-800">
               {% if 'super_admin' in current_user.roles %}
-              <th class="px-4 py-3 w-10"></th>
+              <th class="px-3 py-2 w-8"></th>
               {% endif %} {% for column in columns %}
               <th
-                class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                class="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 backdrop-blur-md"
               >
                 {{ column }}
               </th>
               {% endfor %}
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-700/30">
+          <tbody class="divide-y divide-slate-800/40">
             {% for row in rows %}
             <tr
-              class="interactive-item hover:bg-blue-500/5 transition-colors group"
+              class="hover:bg-blue-500/[0.02] transition-colors group"
             >
               {% if 'super_admin' in current_user.roles %}
-              <td class="px-4 py-3">
+              <td class="px-3 py-1.5">
                 <button
                   onclick="openEditModal(this.closest('tr').dataset.row, '{{ pk_column }}')"
-                  class="p-1.5 text-slate-400 hover:text-blue-400 transition-colors"
+                  class="p-1 text-slate-500 hover:text-blue-400 transition-colors"
                   data-row="{{ row | tojson | forceescape }}"
                 >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    />
-                  </svg>
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                 </button>
               </td>
               {% endif %} {% for column in columns %}
-              <td class="px-4 py-3 text-sm text-slate-300">
+              <td class="px-3 py-1.5 text-[11px] text-slate-400 font-medium">
                 <div
-                  class="max-w-[200px] truncate"
+                  class="max-w-[180px] truncate"
                   title="{{ row[column] if row[column] is not none else 'null' }}"
                 >
                   {% if current_table == 'users' and column == 'id' %}
-                  <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-2">
                     <div
-                      class="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-slate-700/50 border border-slate-600 flex items-center justify-center"
+                      class="w-6 h-6 rounded-md overflow-hidden flex-shrink-0 bg-slate-800 border border-slate-700 flex items-center justify-center"
                     >
                       {% if row.get('avatar_url') or row.get('image') %}
                       <img
                         src="{{ row.get('avatar_url') or row.get('image') }}"
                         alt=""
-                        class="w-full h-full object-cover"
+                        class="w-full h-full object-cover opacity-80"
                       />
                       {% else %}
-                      <span class="text-xs font-bold text-slate-300"
+                      <span class="text-[10px] font-bold text-slate-500"
                         >{{ (row.get('full_name') or row.get('email') or 'U')[0]
                         | upper }}</span
                       >
@@ -137,11 +101,11 @@ endblock %} {% block content %}
                     <div class="flex flex-col">
                       <a
                         href="/users/{{ row[column] }}"
-                        class="text-blue-400 hover:text-blue-300 font-medium transition-colors text-sm"
+                        class="text-blue-400 hover:text-blue-300 font-bold transition-colors text-[11px]"
                       >
                         {{ row.get('full_name') or 'No name' }}
                       </a>
-                      <span class="text-xs text-slate-500"
+                      <span class="text-[9px] text-slate-600 font-bold uppercase tracking-tight"
                         >{{ row.get('email') }}</span
                       >
                     </div>
@@ -149,36 +113,36 @@ endblock %} {% block content %}
                   {% elif current_table == 'projects' and column == 'id' %}
                   <a
                     href="/projects/{{ row[column] }}"
-                    class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    class="text-blue-400 hover:text-blue-300 font-bold transition-colors"
                     >{{ row[column] }}</a
                   >
                   {% elif current_table == 'tasks' and column == 'id' %}
                   <a
                     href="/tasks/{{ row[column] }}"
-                    class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    class="text-blue-400 hover:text-blue-300 font-bold transition-colors"
                     >{{ row[column] }}</a
                   >
                   {% elif current_table == 'clients' and column == 'id' %}
                   <a
                     href="/clients/{{ row[column] }}"
-                    class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    class="text-blue-400 hover:text-blue-300 font-bold transition-colors"
                     >{{ row[column] }}</a
                   >
                   {% elif current_table == 'notes' and column == 'id' %}
                   <a
                     href="/notes/{{ row[column] }}"
-                    class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    class="text-blue-400 hover:text-blue-300 font-bold transition-colors"
                     >{{ row[column] }}</a
                   >
                   {% elif current_table == 'events' and column == 'id' %}
                   <a
                     href="/events/{{ row[column] }}"
-                    class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    class="text-blue-400 hover:text-blue-300 font-bold transition-colors"
                     >{{ row[column] }}</a
                   >
                   {% elif current_table == 'users' and (column == 'full_name' or
                   column == 'name') %}
-                  <span class="font-medium text-slate-200"
+                  <span class="font-bold text-slate-300"
                     >{{ row.get('full_name') or row.get('name') or 'No name set'
                     }}</span
                   >
@@ -195,19 +159,7 @@ endblock %} {% block content %}
                 class="px-6 py-12 text-center"
               >
                 <div class="flex flex-col items-center">
-                  <svg
-                    class="w-12 h-12 text-slate-700 mb-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
+                  <i data-lucide="search-x" class="w-12 h-12 text-slate-700 mb-3"></i>
                   <p class="text-slate-400 font-medium">No records found</p>
                 </div>
               </td>
@@ -217,15 +169,15 @@ endblock %} {% block content %}
         </table>
       </div>
       <div
-        class="px-4 py-3 bg-slate-800/30 flex flex-wrap items-center justify-between gap-4 text-xs border-t border-slate-700/30"
+        class="px-4 py-2 bg-slate-900 sticky bottom-0 z-20 flex flex-wrap items-center justify-between gap-4 text-[10px] border-t border-slate-800"
       >
         <div class="flex items-center gap-4">
-          <span class="text-slate-400 font-medium">
-            Showing {{ rows|length }} of {{ pagination.total_records }} records
+          <span class="text-slate-500 font-bold uppercase tracking-widest">
+            Showing {{ rows|length }} / {{ pagination.total_records }}
           </span>
           {% if pagination.total_pages > 1 %}
           <span
-            class="px-2 py-0.5 bg-slate-700/50 rounded text-slate-400 font-semibold border border-slate-600/50"
+            class="px-2 py-0.5 bg-slate-800/50 rounded text-slate-500 font-bold border border-slate-700/50"
           >
             Page {{ pagination.page }} of {{ pagination.total_pages }}
           </span>
@@ -237,93 +189,45 @@ endblock %} {% block content %}
             {% if pagination.has_prev %}
             <a
               href="/database?table_name={{ current_table }}&page={{ pagination.page - 1 }}{% if q %}&q={{ q }}{% endif %}"
-              class="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-md transition-all flex items-center gap-1.5 border border-slate-600/30"
+              class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded transition-all flex items-center gap-1 border border-slate-700/50"
             >
-              <svg
-                class="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Previous
+            <i data-lucide="chevron-left" class="w-3 h-3"></i>
+              Prev
             </a>
             {% else %}
             <span
-              class="px-3 py-1.5 bg-slate-800/20 text-slate-600 rounded-md cursor-not-allowed flex items-center gap-1.5 border border-slate-700/30"
+              class="px-2.5 py-1 bg-slate-900/50 text-slate-700 rounded cursor-not-allowed flex items-center gap-1 border border-slate-800/50"
             >
-              <svg
-                class="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Previous
+            <i data-lucide="chevron-left" class="w-3 h-3"></i>
+              Prev
             </span>
             {% endif %} {% if pagination.has_next %}
             <a
               href="/database?table_name={{ current_table }}&page={{ pagination.page + 1 }}{% if q %}&q={{ q }}{% endif %}"
-              class="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-md transition-all flex items-center gap-1.5 border border-slate-600/30"
+              class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded transition-all flex items-center gap-1 border border-slate-700/50"
             >
               Next
-              <svg
-                class="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              <i data-lucide="chevron-right" class="w-3 h-3"></i>
             </a>
             {% else %}
             <span
-              class="px-3 py-1.5 bg-slate-800/20 text-slate-600 rounded-md cursor-not-allowed flex items-center gap-1.5 border border-slate-700/30"
+              class="px-2.5 py-1 bg-slate-900/50 text-slate-700 rounded cursor-not-allowed flex items-center gap-1 border border-slate-800/50"
             >
               Next
-              <svg
-                class="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              <i data-lucide="chevron-right" class="w-3 h-3"></i>
             </span>
             {% endif %}
           </div>
 
-          <div class="h-4 w-px bg-slate-700/50"></div>
+          <div class="h-4 w-px bg-slate-800"></div>
 
           <div class="flex items-center gap-2 pr-2">
             <span
-              class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"
+              class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"
             ></span>
             <span
-              class="text-slate-500 font-bold uppercase tracking-widest text-[9px]"
-              >Live Data</span
+              class="text-slate-600 font-bold uppercase tracking-widest text-[8px]"
+              >Live</span
             >
           </div>
         </div>
@@ -338,19 +242,7 @@ endblock %} {% block content %}
             <div
               class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400"
             >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
+              <i data-lucide="database" class="w-6 h-6 text-blue-400"></i>
             </div>
             <div>
               <h3 class="text-lg font-bold text-slate-100">Database System</h3>
@@ -381,19 +273,7 @@ endblock %} {% block content %}
             <div
               class="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-400"
             >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
+              <i data-lucide="bar-chart-3" class="w-6 h-6 text-amber-400"></i>
             </div>
             <div>
               <h3 class="text-lg font-bold text-slate-100">Schema Health</h3>
@@ -426,19 +306,7 @@ endblock %} {% block content %}
             <div
               class="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400"
             >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                />
-              </svg>
+              <i data-lucide="trending-up" class="w-6 h-6 text-emerald-400"></i>
             </div>
             <div>
               <h3 class="text-lg font-bold text-slate-100">Data Growth</h3>
@@ -490,19 +358,7 @@ endblock %} {% block content %}
               <span class="text-sm font-bold text-slate-300 capitalize"
                 >{{ table.replace('_', ' ') }}</span
               >
-              <svg
-                class="w-4 h-4 text-slate-600 group-hover:text-blue-400 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-blue-400 transition-colors"></i>
             </div>
             <div class="flex items-baseline gap-2">
               <span class="text-2xl font-black text-slate-100"
@@ -538,19 +394,7 @@ endblock %} {% block content %}
         onclick="closeCreateModal()"
         class="text-slate-400 hover:text-slate-200 transition-colors"
       >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <i data-lucide="x" class="w-6 h-6"></i>
       </button>
     </div>
     <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
@@ -595,19 +439,7 @@ endblock %} {% block content %}
         onclick="closeEditModal()"
         class="text-slate-400 hover:text-slate-200 transition-colors"
       >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <i data-lucide="x" class="w-6 h-6"></i>
       </button>
     </div>
     <div class="p-6 overflow-y-auto custom-scrollbar flex-1">

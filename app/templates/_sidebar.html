@@ -1,25 +1,58 @@
-<aside class="w-64 glass-elevated border-r border-slate-700 flex flex-col fixed left-0 top-14 bottom-0 z-40">
+<aside x-data="{ 
+    openGroups: [],
+    allGroups: ['Auth', 'Attendance', 'Projects & Tasks', 'Time Off', 'Notes', 'System']
+}" class="w-64 glass-elevated border-r border-slate-700 flex flex-col fixed left-0 top-14 bottom-0 z-40">
     <div class="px-4 h-16 border-b border-slate-700 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center border border-blue-500/20">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 4h16m-16 4h16" />
-                </svg>
+            <div class="w-7 h-7 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center border border-blue-500/20">
+                <i data-lucide="layout-grid" class="w-4 h-4 text-white"></i>
             </div>
-            <span class="font-semibold text-sm tracking-tight text-slate-100">Tables</span>
+            <span class="font-bold text-xs tracking-tight text-slate-100 uppercase">Database</span>
         </div>
+        <button @click="openGroups.length > 0 ? openGroups = [] : openGroups = [...allGroups]" 
+                class="p-1.5 rounded-md hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-all group"
+                :title="openGroups.length > 0 ? 'Collapse All' : 'Expand All'">
+            <i x-show="openGroups.length > 0" data-lucide="chevrons-down-up" class="w-4 h-4"></i>
+            <i x-show="openGroups.length == 0" data-lucide="chevrons-up-down" class="w-4 h-4" x-cloak></i>
+        </button>
     </div>
     <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
         {% if tables %}
-            {% for table in tables %}
-            <a href="/database?table_name={{ table }}" 
-               class="interactive-item flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all border {% if current_table == table %} bg-blue-500/10 text-blue-400 border-blue-500/30 {% else %} text-slate-400 border-transparent hover:text-slate-200 {% endif %}">
-                <div class="w-1.5 h-1.5 rounded-full {% if current_table == table %} bg-blue-400 {% else %} bg-slate-600 {% endif %}"></div>
-                <span class="text-sm font-medium truncate">{{ table }}</span>
-            </a>
-            {% endfor %}
+            {% set grouped_tables = [
+                {'name': 'Auth', 'icon': 'shield', 'tables': ['users', 'accounts', 'user_sessions']},
+                {'name': 'Attendance', 'icon': 'map-pin', 'tables': ['office_locations', 'attendance_policies', 'location_logs', 'attendance_records', 'presence_state_history', 'attendance_overrides']},
+                {'name': 'Projects & Tasks', 'icon': 'briefcase', 'tables': ['projects', 'tasks', 'task_assignees', 'clients', 'events', 'decisions']},
+                {'name': 'Time Off', 'icon': 'clock', 'tables': ['time_offs', 'time_off_requests']},
+                {'name': 'Notes', 'icon': 'pencil', 'tables': ['notes', 'note_shares']},
+                {'name': 'System', 'icon': 'settings', 'tables': ['notifications']}
+            ] %}
+            <div class="space-y-4">
+                {% for group in grouped_tables %}
+                <div class="space-y-1">
+                    <button @click="openGroups.includes('{{ group.name }}') ? openGroups = openGroups.filter(g => g !== '{{ group.name }}') : openGroups.push('{{ group.name }}')" 
+                            class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors group">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="{{ group.icon }}" class="w-3.5 h-3.5 transition-colors group-hover:text-blue-400"></i>
+                            <span>{{ group.name }}</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-3 h-3 transition-transform duration-200" :class="openGroups.includes('{{ group.name }}') ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="openGroups.includes('{{ group.name }}')" x-collapse class="space-y-0.5 ml-4 pl-3 border-l border-slate-800">
+                        {% for table in tables %}
+                            {% if table in group.tables %}
+                             <a href="/database?table_name={{ table }}" 
+                                class="interactive-item flex items-center gap-2 px-3 py-1.5 rounded-md transition-all border relative {% if current_table == table %} bg-blue-500/10 text-blue-400 border-blue-500/20 {% else %} text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-700/30 {% endif %}">
+                                 <span class="absolute -left-3 top-1/2 w-3 h-px bg-slate-800"></span>
+                                 <span class="text-xs font-medium truncate">{{ table }}</span>
+                             </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         {% else %}
-            <div class="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">
+            <div class="p-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center">
                 Log in to see tables
             </div>
         {% endif %}

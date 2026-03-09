@@ -13,24 +13,29 @@
     <!-- Alpine.js for reactive components -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --surface-glass: rgba(30, 41, 59, 0.4);
-            --surface-elevated: rgba(30, 41, 59, 0.6);
+            --bg-primary: #020617;
+            --bg-secondary: #0f172a;
+            --surface-glass: rgba(2, 6, 23, 0.4);
+            --surface-elevated: rgba(2, 6, 23, 0.7);
             --accent-blue: #3b82f6;
-            --accent-dark: #1e40af;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border-subtle: rgba(148, 163, 184, 0.06);
-            --border-normal: rgba(148, 163, 184, 0.1);
+            --accent-dark: #1d4ed8;
+            --text-primary: #f8fafc;
+            --text-secondary: #64748b;
+            --border-subtle: rgba(148, 163, 184, 0.04);
+            --border-normal: rgba(148, 163, 184, 0.08);
         }
 
         body { 
             font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background-color: var(--bg-primary);
+            background-image: radial-gradient(at top right, #0f172a 0%, #020617 100%);
             color: var(--text-primary);
+            letter-spacing: -0.01em;
         }
         
         .glass {
@@ -113,7 +118,29 @@
         /* Seamless UI */
         .seamless {
             border: none;
-            background: rgba(30, 41, 59, 0.3);
+            background: rgba(2, 6, 23, 0.5);
+        }
+
+        /* Layout Utilities */
+        .app-viewport {
+            height: calc(100vh - 3.5rem);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .sticky-section-bottom {
+            position: sticky;
+            bottom: 0;
+            z-index: 30;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-normal);
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -133,11 +160,12 @@
                         <span class="font-bold text-lg tracking-tight">Fast<span class="text-blue-400">Dash</span></span>
                     </a>
                     
-                    <div class="hidden md:flex items-center gap-4">
-                        <a href="/" class="text-sm font-medium text-slate-400 hover:text-blue-400 transition-colors px-2">Home</a>
-                        <a href="/database" class="text-sm font-medium text-slate-400 hover:text-blue-400 transition-colors px-2">Database</a>
-                        <a href="/time-off" class="text-sm font-medium text-slate-400 hover:text-blue-400 transition-colors px-2">Leave Management</a>
-                        <a href="/create-user" class="text-sm font-medium text-slate-400 hover:text-blue-400 transition-colors px-2">Create User</a>
+                    <div class="hidden md:flex items-center gap-2">
+                        <a href="/" class="text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all px-3 py-1.5 rounded-md hover:bg-blue-500/5">Home</a>
+                        <a href="/attendance" class="text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all px-3 py-1.5 rounded-md hover:bg-blue-500/5">Attendance</a>
+                        <a href="/time-off" class="text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all px-3 py-1.5 rounded-md hover:bg-blue-500/5">Leave Management</a>
+                        <a href="/database" class="text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all px-3 py-1.5 rounded-md hover:bg-blue-500/5">Database</a>
+                        <a href="/create-user" class="text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all px-3 py-1.5 rounded-md hover:bg-blue-500/5">Create User</a>
                     </div>
                 </div>
 
@@ -166,6 +194,11 @@
     <main class="pt-14 {% if request.url.path not in ['/login', '/register'] %}pl-64{% endif %}">
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 
     <!-- Global Loading Utilities -->
     <script>

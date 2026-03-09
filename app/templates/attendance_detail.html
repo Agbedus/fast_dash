@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Fast Dash - Attendance Details{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-6">
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Top Nav -->
+    <div class="flex items-center justify-between">
+        <a href="/attendance" class="text-sm font-medium text-slate-400 hover:text-blue-400 flex items-center gap-2 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 backdrop-blur-md">
+      <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-100 flex items-center gap-3">
+              Attendance Record #{{ record.id }}
+            </h1>
+            <p class="text-slate-400 mt-1">For <span class="font-semibold text-slate-300">{{ owner.full_name or owner.email }}</span> on {{ record.work_date }}</p>
+          </div>
+          
+          <span class="px-3 py-1 text-sm font-bold rounded-full 
+                {% if record.attendance_state == 'CLOCKED_IN' %} bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 
+                {% elif record.attendance_state == 'CLOCKED_OUT' %} bg-amber-500/20 text-amber-400 border border-amber-500/30 
+                {% else %} bg-slate-500/20 text-slate-400 border border-slate-500/30 {% endif %}">
+                {{ record.attendance_state }}
+          </span>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Details Card -->
+        <div class="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50">
+            <h2 class="text-lg font-bold text-slate-100 mb-4 border-b border-slate-700 pb-2">Record Details</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <span class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Clock In Time</span>
+                    <span class="text-slate-200 font-semibold">{{ record.clock_in_at[11:16] if record.clock_in_at else '--:--' }}</span>
+                </div>
+                <div>
+                    <span class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Clock Out Time</span>
+                    <span class="text-slate-200 font-semibold">{{ record.clock_out_at[11:16] if record.clock_out_at else '--:--' }}</span>
+                </div>
+                <div class="pt-2 border-t border-slate-700/50">
+                    <span class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">First Seen In Office</span>
+                    <span class="text-slate-300">{{ record.first_seen_in_office_at[11:16] if record.first_seen_in_office_at else 'N/A' }}</span>
+                </div>
+                <div>
+                    <span class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Last Seen In Office</span>
+                    <span class="text-slate-300">{{ record.last_seen_in_office_at[11:16] if record.last_seen_in_office_at else 'N/A' }}</span>
+                </div>
+                <div class="pt-2 border-t border-slate-700/50 text-xs text-slate-500">
+                    Last updated: {{ record.updated_at[:16] }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Overrides Card -->
+        <div class="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50">
+            <h2 class="text-lg font-bold text-slate-100 mb-4 border-b border-slate-700 pb-2 flex justify-between items-center">
+                Review History / Overrides
+                {% if 'manager' in current_user.roles or 'super_admin' in current_user.roles %}
+                <button class="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded border border-blue-500/20 transition-colors">
+                    Add Override
+                </button>
+                {% endif %}
+            </h2>
+            
+            {% if overrides %}
+                <div class="space-y-4">
+                    {% for over in overrides %}
+                    <div class="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-slate-300 uppercase">Override log</span>
+                            <span class="text-[10px] text-slate-500">{{ over.created_at[:16] }}</span>
+                        </div>
+                        <p class="text-sm text-slate-300 mb-3"><span class="font-medium">Reason:</span> {{ over.reason }}</p>
+                        
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="bg-slate-800 p-2 rounded border border-slate-700">
+                                <span class="block text-[10px] text-slate-500 mb-1">Previous</span>
+                                <div>In: {{ over.old_clock_in_at[11:16] if over.old_clock_in_at else '--' }}</div>
+                                <div>Out: {{ over.old_clock_out_at[11:16] if over.old_clock_out_at else '--' }}</div>
+                            </div>
+                            <div class="bg-slate-800 p-2 rounded border border-blue-500/30 text-blue-100">
+                                <span class="block text-[10px] text-blue-400 mb-1">New</span>
+                                <div>In: {{ over.new_clock_in_at[11:16] if over.new_clock_in_at else '--' }}</div>
+                                <div>Out: {{ over.new_clock_out_at[11:16] if over.new_clock_out_at else '--' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-6">
+                    <p class="text-sm text-slate-500 font-medium">No overrides applied to this record.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

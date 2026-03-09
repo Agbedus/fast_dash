@@ -4,94 +4,88 @@
 
 {% block content %}
 <div class="min-h-screen p-6">
-    <div class="max-w-6xl mx-auto space-y-8 animate__animated animate__fadeIn">
+    <div class="max-w-6xl mx-auto space-y-6 animate__animated animate__fadeIn">
         <!-- Header: Personalized Welcome -->
         <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-slate-100 tracking-tight mb-2">
-                    Welcome back, <span class="text-blue-400">{{ current_user.full_name or current_user.email.split('@')[0] }}</span>!
+                <h1 class="text-2xl font-bold text-slate-100 tracking-tight mb-1">
+                    Welcome, <span class="text-blue-500">{{ current_user.full_name or current_user.email.split('@')[0] }}</span>
                 </h1>
-                <p class="text-slate-400 text-sm font-medium">
-                    Here's what's happening across your ecosystem today.
+                <p class="text-slate-500 text-xs font-medium">
+                    System activity and ecosystem overview.
                 </p>
             </div>
             <div class="flex items-center gap-3">
-                <div class="px-4 py-2 glass rounded-lg border-slate-700/50 flex items-center gap-2">
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                    <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest leading-none">System Online</span>
+                <div class="px-3 py-1.5 glass bg-slate-900/50 rounded border border-slate-800 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Healthy</span>
                 </div>
             </div>
         </header>
 
         <!-- Stats Overview Row -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="glass-elevated rounded-xl p-6 border-l-4 border-blue-500 interactive-card">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-elevated bg-slate-900/40 rounded-lg p-5 border-l-2 border-blue-500 interactive-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 bg-blue-500/10 rounded flex items-center justify-center text-blue-400">
+                        <i data-lucide="users" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Users</span>
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Users</span>
                 </div>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-black text-slate-100">{{ stats.users }}</span>
-                    <span class="text-xs font-semibold text-emerald-400">+{{ (stats.users * 0.1)|int }}% this month</span>
+                    <span class="text-2xl font-black text-slate-100">{{ stats.users }}</span>
+                    <span class="text-[10px] font-bold text-emerald-500 uppercase">+{{ (stats.users * 0.1)|int }}%</span>
                 </div>
             </div>
 
-            <div class="glass-elevated rounded-xl p-6 border-l-4 border-violet-500 interactive-card">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-violet-500/10 rounded-lg flex items-center justify-center text-violet-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 4h16m-16 4h16" />
-                        </svg>
+            <div class="glass-elevated bg-slate-900/40 rounded-lg p-5 border-l-2 border-violet-500 interactive-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 bg-violet-500/10 rounded flex items-center justify-center text-violet-400">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Projects</span>
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Projects</span>
                 </div>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-black text-slate-100">{{ stats.projects }}</span>
-                    <span class="text-xs font-semibold text-slate-500">Managing {{ stats.active_projects|length }} in-progress</span>
+                    <span class="text-2xl font-black text-slate-100">{{ stats.projects }}</span>
+                    <span class="text-[9px] font-bold text-slate-600 uppercase tracking-tight">{{ stats.active_projects|length }} Active</span>
                 </div>
             </div>
 
-            <div class="glass-elevated rounded-xl p-6 border-l-4 border-amber-500 interactive-card">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
+            <div class="glass-elevated bg-slate-900/40 rounded-lg p-5 border-l-2 border-amber-500 interactive-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 bg-amber-500/10 rounded flex items-center justify-center text-amber-400">
+                        <i data-lucide="check-square" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Global Tasks</span>
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tasks</span>
                 </div>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-black text-slate-100">{{ stats.tasks }}</span>
-                    <span class="text-xs font-semibold text-blue-400 italic">Across all boards</span>
+                    <span class="text-2xl font-black text-slate-100">{{ stats.tasks }}</span>
+                    <span class="text-[9px] font-bold text-blue-500 uppercase tracking-tight">Ecosystem</span>
                 </div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Recent Activity: Latest Tasks -->
-            <div class="lg:col-span-2 space-y-4">
-                <div class="flex items-center justify-between px-2">
-                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-widest">Recent Activity</h2>
-                    <a href="/database?table_name=tasks" class="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest">View All Tasks</a>
+            <div class="lg:col-span-2 space-y-3">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Recent Activity</h2>
+                    <a href="/database?table_name=tasks" class="text-[9px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest">View All</a>
                 </div>
-                <div class="glass-elevated rounded-xl overflow-hidden divide-y divide-slate-700/30">
+                <div class="glass-elevated bg-slate-900/40 rounded-lg overflow-hidden divide-y divide-slate-800/40 border border-slate-800/50">
                     {% for task in recent_tasks %}
-                    <a href="/tasks/{{ task.id }}" class="flex items-center gap-4 p-4 interactive-item group">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800/50 flex flex-col items-center justify-center flex-shrink-0 group-hover:bg-slate-700/50 transition-colors">
-                            <span class="text-[10px] font-bold text-slate-500 leading-none">ID</span>
-                            <span class="text-xs font-mono font-bold text-blue-400 leading-none mt-0.5">#{{ task.id }}</span>
+                    <a href="/tasks/{{ task.id }}" class="flex items-center gap-3 p-3 hover:bg-blue-500/[0.02] transition-colors group">
+                        <div class="w-8 h-8 rounded bg-slate-950 border border-slate-800 flex flex-col items-center justify-center flex-shrink-0 group-hover:bg-slate-900 transition-colors">
+                            <span class="text-[8px] font-black text-slate-600 leading-none">ID</span>
+                            <span class="text-[10px] font-black text-blue-500 leading-none mt-0.5">#{{ task.id }}</span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h4 class="text-sm font-semibold text-slate-200 truncate">{{ task.name }}</h4>
-                            <p class="text-xs text-slate-500 truncate">{{ task.status or 'No status' }} • {{ task.priority or 'Normal' }} Priority</p>
+                            <h4 class="text-xs font-bold text-slate-300 truncate lowercase">{{ task.name }}</h4>
+                            <p class="text-[10px] text-slate-600 truncate font-bold uppercase tracking-tight">{{ task.status or 'No status' }} • {{ task.priority or 'Normal' }}</p>
                         </div>
                         <div class="text-right hidden sm:block">
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{{ task.created_at[:10] if task.created_at else 'N/A' }}</p>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-slate-700/50 text-slate-400 uppercase tracking-widest">Created</span>
+                            <p class="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">{{ task.created_at[:10] if task.created_at else 'N/A' }}</p>
+                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black border border-slate-800 text-slate-500 uppercase tracking-widest bg-slate-950">Logged</span>
                         </div>
                     </a>
                     {% endfor %}
@@ -104,20 +98,17 @@
             </div>
 
             <!-- Focus & Quick Links -->
-            <div class="space-y-6">
+            <div class="space-y-4">
                 <!-- Active Projects List -->
-                <div class="space-y-4">
-                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-widest px-2">Project Focus</h2>
-                    <div class="space-y-3">
+                <div class="space-y-3">
+                    <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Projects</h2>
+                    <div class="space-y-2">
                         {% for project in stats.active_projects %}
-                        <div class="glass rounded-xl p-4 border-l-2 border-emerald-500/50">
-                            <h4 class="text-sm font-bold text-slate-200 mb-1">{{ project.name }}</h4>
-                            <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        <div class="bg-slate-900/40 rounded-lg p-3 border-l-2 border-emerald-500/50 border border-slate-800/50">
+                            <h4 class="text-xs font-bold text-slate-300 mb-0.5 truncate">{{ project.name }}</h4>
+                            <div class="flex items-center justify-between text-[9px] font-black text-slate-600 uppercase tracking-widest">
                                 <span>{{ project.priority }} Priority</span>
-                                <span class="text-emerald-400">In Progress</span>
-                            </div>
-                            <div class="mt-3 w-full bg-slate-800/50 rounded-full h-1">
-                                <div class="bg-emerald-500 h-1 rounded-full" style="width: 65%"></div>
+                                <span class="text-emerald-500/80">Active</span>
                             </div>
                         </div>
                         {% endfor %}
@@ -134,15 +125,11 @@
                     <h2 class="text-sm font-bold text-slate-300 uppercase tracking-widest px-2">Quick Access</h2>
                     <div class="grid grid-cols-2 gap-3">
                         <a href="/database" class="glass-elevated p-4 rounded-xl text-center interactive-card group">
-                            <svg class="w-6 h-6 text-slate-400 mx-auto mb-2 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 4h16m-16 4h16" />
-                            </svg>
+                            <i data-lucide="database" class="w-6 h-6 text-slate-400 mx-auto mb-2 group-hover:text-emerald-400 transition-colors"></i>
                             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Explorer</span>
                         </a>
                         <a href="/docs" class="glass-elevated p-4 rounded-xl text-center interactive-card group">
-                            <svg class="w-6 h-6 text-slate-400 mx-auto mb-2 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
+                            <i data-lucide="file-text" class="w-6 h-6 text-slate-400 mx-auto mb-2 group-hover:text-blue-400 transition-colors"></i>
                             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">API Docs</span>
                         </a>
                     </div>

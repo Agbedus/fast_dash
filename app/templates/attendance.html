@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Fast Dash - Attendance{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-6">
+  <div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-lg backdrop-blur-md">
+      <div>
+        <h1 class="text-xl font-bold text-slate-100 flex items-center gap-2.5">
+          <i data-lucide="clock" class="w-6 h-6 text-blue-500"></i>
+          Attendance Dashboard
+        </h1>
+        <p class="text-slate-500 text-xs font-medium">Track presence and office location logs.</p>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        {% if offices %}
+        <div class="bg-slate-950 px-3 py-1.5 rounded border border-slate-800 flex flex-col items-center">
+            <span class="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Office</span>
+            <span class="text-xs text-slate-300 font-bold tracking-tight">{{ offices[0].name }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- My Status Widget -->
+      <div class="lg:col-span-1 space-y-4">
+        <div class="bg-slate-900/40 p-5 rounded-lg border border-slate-800/60 hover:border-blue-500/20 transition-colors">
+          <h2 class="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2 uppercase tracking-widest">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+            Current Status
+          </h2>
+          
+          {% if today_record %}
+            <div class="flex flex-col gap-2.5">
+                <div class="flex justify-between items-center p-2.5 bg-slate-950/50 rounded border border-slate-800/50">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">State</span>
+                    <span class="px-2 py-0.5 text-[10px] font-black rounded uppercase tracking-wider
+                        {% if today_record.attendance_state == 'CLOCKED_IN' %} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 
+                        {% elif today_record.attendance_state == 'CLOCKED_OUT' %} bg-amber-500/10 text-amber-400 border border-amber-500/20 
+                        {% else %} bg-slate-800/20 text-slate-500 border border-slate-700 {% endif %}">
+                        {{ today_record.attendance_state }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between items-center p-2.5 bg-slate-950/50 rounded border border-slate-800/50">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">In</span>
+                    <span class="text-xs font-black text-slate-200 tracking-tight">
+                        {{ today_record.clock_in_at[11:16] if today_record.clock_in_at else '--:--' }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between items-center p-2.5 bg-slate-950/50 rounded border border-slate-800/50">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Out</span>
+                    <span class="text-xs font-black text-slate-200 tracking-tight">
+                        {{ today_record.clock_out_at[11:16] if today_record.clock_out_at else '--:--' }}
+                    </span>
+                </div>
+            </div>
+          {% else %}
+            <div class="text-center py-8">
+                <div class="mx-auto w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                    <i data-lucide="alert-circle" class="w-8 h-8 text-slate-500"></i>
+                </div>
+                <p class="text-slate-400 font-medium text-sm">No attendance record yet today.</p>
+                <p class="text-slate-500 text-xs mt-1">Your device will auto clock-in when you arrive at the office.</p>
+            </div>
+          {% endif %}
+        </div>
+        
+        <!-- Recent Location Pings -->
+        <div class="bg-slate-900/40 p-5 rounded-lg border border-slate-800/60">
+          <h2 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-widest">Logs</h2>
+          {% if recent_logs %}
+          <div class="space-y-2.5 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px before:h-full before:w-px before:bg-slate-800">
+              {% for log in recent_logs %}
+              <div class="relative flex items-center gap-3">
+                  <div class="flex items-center justify-center w-8 h-8 rounded-full border border-slate-800 bg-slate-950 text-slate-600 shrink-0 z-10">
+                      <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="flex-1 bg-slate-950 border border-slate-800 p-2.5 rounded">
+                      <div class="flex items-center justify-between mb-0.5">
+                          <div class="font-bold text-slate-300 text-[10px] uppercase">{{ log.derived_zone.replace('_', ' ') }}</div>
+                          <time class="font-bold text-blue-500 text-[10px]">{{ log.recorded_at[11:16] }}</time>
+                      </div>
+                      <div class="text-slate-600 text-[9px] font-medium">{{ log.distance_from_office_meters | round(1) }}m from office</div>
+                  </div>
+              </div>
+              {% endfor %}
+          </div>
+          {% else %}
+            <p class="text-[10px] font-bold text-slate-600 text-center py-4 uppercase tracking-widest">No logs</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Main Panel -->
+      <div class="lg:col-span-2 space-y-4">
+        
+        <!-- Team Attendance (Managers Only) -->
+        {% if 'manager' in current_user.roles or 'super_admin' in current_user.roles %}
+        <div class="bg-slate-900/40 rounded-lg border border-slate-800/60 overflow-hidden">
+          <div class="px-5 py-3 border-b border-slate-800 bg-slate-900/80">
+            <h2 class="text-sm font-bold text-slate-100 uppercase tracking-widest">Team</h2>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-slate-950/40 border-b border-slate-800">
+                  <th class="px-5 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Member</th>
+                  <th class="px-5 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">State</th>
+                  <th class="px-5 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">In</th>
+                  <th class="px-5 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Out</th>
+                  <th class="px-5 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/40">
+                {% for record, user_obj in team_records %}
+                <tr class="hover:bg-blue-500/[0.02] transition-colors">
+                  <td class="px-5 py-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-7 h-7 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                        {{ user_obj.full_name[0] if user_obj.full_name else (user_obj.email[0] | upper) }}
+                      </div>
+                      <div>
+                        <div class="text-[11px] font-bold text-slate-200 tracking-tight">{{ user_obj.full_name or 'Unknown' }}</div>
+                        <div class="text-[9px] text-slate-600 font-bold uppercase tracking-tight">{{ user_obj.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-5 py-2">
+                    <span class="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-wider
+                        {% if record.attendance_state == 'CLOCKED_IN' %} bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 
+                        {% elif record.attendance_state == 'CLOCKED_OUT' %} bg-amber-500/10 text-amber-500 border border-amber-500/20 
+                        {% else %} bg-slate-800/50 text-slate-600 border border-slate-700 {% endif %}">
+                        {{ record.attendance_state }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-2 text-xs text-slate-300 font-black">
+                    {{ record.clock_in_at[11:16] if record.clock_in_at else '--:--' }}
+                  </td>
+                  <td class="px-5 py-2 text-xs text-slate-300 font-black">
+                    {{ record.clock_out_at[11:16] if record.clock_out_at else '--:--' }}
+                  </td>
+                  <td class="px-5 py-2 text-right">
+                    <button class="px-2 py-1 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 text-[10px] font-black rounded border border-blue-500/10 transition-colors uppercase tracking-widest">
+                        Override
+                    </button>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-sm text-slate-500 font-medium">
+                        <div class="flex flex-col items-center">
+                            <i data-lucide="users" class="w-10 h-10 text-slate-600 mb-3"></i>
+                            No team attendance records for today.
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+        
+        <!-- API Connection Info -->
+        <div class="bg-indigo-900/30 border border-indigo-500/30 p-6 rounded-xl flex items-start gap-4">
+            <div class="p-3 bg-indigo-500/20 rounded-lg text-indigo-400 shrink-0">
+                <i data-lucide="smartphone" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-1">Mobile Integration Active</h3>
+                <p class="text-sm text-indigo-200/70">The attendance dashboard connects to mobile client GPS pings. Locations are securely transmitted to <code class="bg-indigo-950 px-2 py-0.5 rounded text-indigo-300 border border-indigo-800 text-xs">POST /api/v1/attendance/location-update</code>.</p>
+            </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

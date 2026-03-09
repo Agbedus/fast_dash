@@ -1,24 +1,30 @@
-scripts/*
+# Folders
+scripts/
+__pycache__/
+env/
+venv/
+.env/
+.venv/
+.idea/
+.vscode/
 
-# Local Database
+# Files
+.DS_Store
+.env
+.env.example
 sqlite.db
+attendance.txt
 
-# IDE
-.idea
-.vscode
-
+# Documentation (Optional to ignore, but based on current .gitignore)
 API_DOCUMENTATION.md
 FASTAPI.md
 FEATURES.md
 USER_PERMISSIONS_MATRIX.md
 
-# Environment variables
-.env
-.env.example
-
-
-
-
-
-
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+.eggs/
 
